@@ -4,540 +4,599 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>给宝宝的睡前故事</title>
-
-  <!-- 降低被搜索引擎收录概率（不是绝对防护） -->
-  <meta name="robots" content="noindex, nofollow" />
-
+  <meta name="theme-color" content="#0b1020" />
   <style>
     :root{
-      --bg1:#070A14;
-      --bg2:#0B1230;
-      --card:rgba(255,255,255,.06);
-      --stroke:rgba(255,255,255,.12);
-      --text:#EAF0FF;
-      --muted:rgba(234,240,255,.72);
-      --accent:#7C83FF;
-      --shadow: 0 20px 60px rgba(0,0,0,.45);
+      --bg:#070a14;
+      --panel:rgba(20,26,50,.55);
+      --panel2:rgba(20,26,50,.42);
+      --stroke:rgba(255,255,255,.10);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.62);
+      --muted2:rgba(255,255,255,.45);
+      --accent:#7c86ff;
+      --accent2:#b28cff;
+      --btn:rgba(124,134,255,.18);
+      --shadow: 0 24px 70px rgba(0,0,0,.55);
       --radius: 22px;
+      --radius2: 16px;
+      --maxw: 980px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
     }
-    *{ box-sizing:border-box; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
     body{
       margin:0;
-      font-family: system-ui, -apple-system, "Segoe UI", Arial, "PingFang SC", "Microsoft YaHei";
+      font-family:var(--sans);
       color:var(--text);
-      background:
-        radial-gradient(1200px 800px at 20% 10%, rgba(124,131,255,.18), transparent 55%),
-        radial-gradient(900px 700px at 80% 30%, rgba(154,216,255,.14), transparent 55%),
-        linear-gradient(160deg, var(--bg1), var(--bg2));
-      min-height:100vh;
-    }
-    body::before{
-      content:"";
-      position:fixed; inset:0;
-      background-image:
-        radial-gradient(2px 2px at 15% 22%, rgba(255,255,255,.32) 30%, transparent 32%),
-        radial-gradient(1.5px 1.5px at 62% 18%, rgba(255,255,255,.25) 30%, transparent 32%),
-        radial-gradient(1.5px 1.5px at 78% 62%, rgba(255,255,255,.18) 30%, transparent 32%),
-        radial-gradient(1px 1px at 28% 70%, rgba(255,255,255,.20) 30%, transparent 32%),
-        radial-gradient(1px 1px at 90% 38%, rgba(255,255,255,.16) 30%, transparent 32%);
-      opacity:.9;
-      pointer-events:none;
+      background: radial-gradient(1200px 700px at 30% 15%, rgba(125,140,255,.20), transparent 60%),
+                  radial-gradient(900px 600px at 85% 20%, rgba(178,140,255,.14), transparent 60%),
+                  radial-gradient(1000px 800px at 50% 110%, rgba(0,0,0,.80), transparent 55%),
+                  var(--bg);
+      overflow-x:hidden;
     }
 
-    .wrap{ max-width: 860px; margin:0 auto; padding: 30px 18px 60px; }
+    /* Canvas sits behind everything */
+    #night-canvas{position:fixed; inset:0; z-index:0; pointer-events:none;}
 
-    .top{
+    .wrap{
+      position:relative;
+      z-index:1;
+      width:min(var(--maxw), calc(100% - 32px));
+      margin: 34px auto 60px;
+    }
+
+    .hero{
       display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:14px;
-      margin-bottom: 18px;
-    }
-
-    .title{
-      display:flex; gap:12px; align-items:center;
+      gap:18px;
+      align-items:center;
+      padding: 18px 18px 14px;
+      border-radius: calc(var(--radius) + 6px);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border: 1px solid var(--stroke);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
     }
     .moon{
-      width:46px; height:46px;
-      border-radius:14px;
-      background: linear-gradient(135deg, rgba(124,131,255,.35), rgba(154,216,255,.18));
-      border:1px solid var(--stroke);
-      display:grid; place-items:center;
-      box-shadow: var(--shadow);
-      font-size:22px;
-      user-select:none;
+      width:64px;height:64px;border-radius:18px;
+      display:grid;place-items:center;
+      background: linear-gradient(180deg, rgba(124,134,255,.22), rgba(124,134,255,.08));
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow: 0 16px 40px rgba(0,0,0,.35);
+      flex:0 0 auto;
+      font-size:30px;
     }
-    h1{ margin:0; font-size: 28px; letter-spacing:.5px; }
-    .sub{ margin:6px 0 0; color:var(--muted); line-height:1.6; }
-
-    .pill{
-      align-self:center;
-      display:flex; gap:8px; align-items:center;
-      padding:10px 12px;
+    .title h1{
+      margin:0;
+      font-size:42px;
+      letter-spacing:.5px;
+      line-height:1.05;
+    }
+    .title p{
+      margin:8px 0 0;
+      color:var(--muted);
+      font-size:18px;
+    }
+    .chip{
+      margin-left:auto;
+      padding: 10px 14px;
       border-radius: 999px;
-      border:1px solid var(--stroke);
-      background: rgba(255,255,255,.05);
-      backdrop-filter: blur(10px);
-      color: var(--muted);
-      font-size: 13px;
-      user-select:none;
-      max-width: 44ch;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(20,26,50,.35);
+      color:var(--muted);
+      font-size:14px;
+      max-width: 320px;
+      text-overflow: ellipsis;
+      overflow:hidden;
+      white-space:nowrap;
     }
-    .pill b{ color:var(--text); font-weight:650; }
 
-    .grid{
+    .status{
+      margin: 18px 0 0;
+      padding: 14px 16px;
+      border-radius: var(--radius2);
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+      color: var(--muted);
+      backdrop-filter: blur(10px);
+      display:none;
+    }
+    .status.show{display:block}
+    .status b{color:var(--text)}
+
+    .toolbar{
+      margin: 18px 0 16px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .btn{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color:var(--text);
+      padding: 10px 14px;
+      border-radius: 999px;
+      cursor:pointer;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+    }
+    .btn:hover{transform: translateY(-1px); background: rgba(255,255,255,.06)}
+    .btn.primary{background: rgba(124,134,255,.20); border-color: rgba(124,134,255,.35)}
+    .btn.ghost{background: transparent}
+    .btn small{color:var(--muted); margin-left:6px}
+
+    .list{
       display:flex;
       flex-direction:column;
-      gap: 14px;
-      margin-top: 18px;
+      gap:14px;
+      margin-top: 10px;
     }
 
     .card{
-      background: linear-gradient(180deg, var(--card), rgba(255,255,255,.04));
-      border:1px solid var(--stroke);
-      border-radius: var(--radius);
       padding: 16px 16px 14px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-      position:relative;
-      overflow:hidden;
-    }
-    .card::after{
-      content:"";
-      position:absolute; inset:-2px;
-      background: radial-gradient(600px 200px at 10% 10%, rgba(124,131,255,.16), transparent 55%);
-      pointer-events:none;
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 18px 55px rgba(0,0,0,.40);
+      backdrop-filter: blur(12px);
     }
 
-    .row{
-      position:relative;
+    .cardHeader{
       display:flex;
-      justify-content:space-between;
       align-items:flex-start;
       gap:12px;
-      z-index:1;
     }
-
-    .left .name{
-      font-size: 20px;
-      font-weight: 760;
-      margin: 0 0 4px;
+    .tagIcon{
+      width:34px;height:34px;border-radius:12px;
+      display:grid;place-items:center;
+      background: rgba(124,134,255,.15);
+      border:1px solid rgba(124,134,255,.25);
+      flex:0 0 auto;
+      font-size:18px;
+      margin-top:2px;
     }
-    .left .note{
+    .meta{
+      flex:1 1 auto;
+      min-width: 0;
+    }
+    .meta h3{
       margin:0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.7;
+      font-size:22px;
+      line-height:1.1;
     }
-
+    .meta .sub{
+      margin-top:8px;
+      color: var(--muted);
+      font-size:14px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .pill{
+      padding: 6px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+      font-size: 12px;
+    }
     .actions{
       display:flex;
       gap:10px;
       align-items:center;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
-
-    .btn{
-      border:0;
-      border-radius: 14px;
-      padding: 10px 12px;
-      cursor:pointer;
-      font-weight: 760;
-      letter-spacing:.2px;
-      background: var(--accent);
-      color: #0B1020;
-      box-shadow: 0 10px 30px rgba(124,131,255,.25);
-      user-select:none;
-    }
-    .btn.secondary{
-      background: transparent;
-      color: var(--text);
-      border:1px solid rgba(255,255,255,.18);
-      box-shadow: none;
-    }
-    .btn:active{ transform: translateY(1px); }
-
-    .badge{
-      font-size:12px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.14);
-      color: var(--muted);
-      background: rgba(255,255,255,.04);
-      user-select:none;
-      white-space:nowrap;
-    }
-    .badge.done{
-      color: rgba(154,216,255,.95);
-      border-color: rgba(154,216,255,.35);
-      background: rgba(154,216,255,.08);
+      flex:0 0 auto;
     }
 
     audio{
-      position:relative;
-      z-index:1;
       width:100%;
       margin-top: 12px;
-      border-radius: 16px;
-      filter: saturate(1.05);
+      border-radius: 999px;
+      background: rgba(255,255,255,.92);
     }
 
-    .divider{
-      color: rgba(234,240,255,.55);
-      font-size: 12px;
-      margin: 10px 0 0;
-      user-select:none;
-    }
-
-    .footer{
-      margin-top: 18px;
-      color: rgba(234,240,255,.60);
-      font-size: 12px;
+    .hint{
+      margin-top: 16px;
+      color: var(--muted2);
+      font-size: 13px;
       line-height: 1.7;
     }
-
-    /* 解锁页 */
-    .lock{
-      position:fixed; inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding: 18px;
-      z-index: 9999;
-      background:
-        radial-gradient(1200px 800px at 20% 10%, rgba(124,131,255,.22), transparent 55%),
-        radial-gradient(900px 700px at 80% 30%, rgba(154,216,255,.18), transparent 55%),
-        linear-gradient(160deg, var(--bg1), var(--bg2));
-    }
-    .lockcard{
-      width:min(520px, 100%);
+    .hint code{
+      font-family: var(--mono);
+      padding: 2px 6px;
+      border-radius: 8px;
       background: rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.14);
-      border-radius: 24px;
-      padding: 18px 18px 16px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-      position:relative;
-      overflow:hidden;
-    }
-    .lockcard::after{
-      content:"";
-      position:absolute; inset:-2px;
-      background: radial-gradient(650px 220px at 10% 10%, rgba(124,131,255,.18), transparent 55%);
-      pointer-events:none;
-    }
-    .locktitle{
-      position:relative;
-      display:flex; gap:10px; align-items:center;
-      font-weight: 820;
-      font-size: 18px;
-      z-index:1;
-      user-select:none;
-    }
-    .locksub{
-      position:relative;
-      margin: 8px 0 14px;
-      color: rgba(234,240,255,.75);
-      line-height:1.65;
-      font-size: 13px;
-      z-index:1;
-    }
-    .lockrow{
-      position:relative;
-      display:flex;
-      gap:10px;
-      z-index:1;
-    }
-    .inp{
-      flex:1;
-      padding: 12px 12px;
-      border-radius: 14px;
-      border:1px solid rgba(255,255,255,.18);
-      background: rgba(0,0,0,.18);
-      color: var(--text);
-      outline:none;
-      font-size: 14px;
-    }
-    .err{
-      position:relative;
-      margin-top: 10px;
-      color: rgba(255,160,180,.95);
-      font-size: 12px;
-      display:none;
-      z-index:1;
-      user-select:none;
+      border:1px solid rgba(255,255,255,.10);
+      color: var(--muted);
     }
 
-    @media (max-width:520px){
-      h1{ font-size: 22px; }
-      .moon{ width:42px; height:42px; }
-      .left .name{ font-size:18px; }
-      .locktitle{ font-size: 16px; }
+    .center{
+      display:grid;
+      place-items:center;
+      margin: 18px 0 0;
+    }
+
+    .fold{
+      display:flex;
+      justify-content:center;
+      margin: 18px 0 0;
+    }
+
+    @media (max-width: 720px){
+      .title h1{font-size: 34px;}
+      .chip{display:none}
+      .meta h3{font-size: 19px;}
     }
   </style>
 </head>
 
 <body>
-  <!-- 解锁层 -->
-  <div class="lock" id="lockLayer" aria-hidden="false">
-    <div class="lockcard">
-      <div class="locktitle"><span class="moon" style="width:40px;height:40px;border-radius:14px;">🔒</span> 解锁今晚的声音</div>
-      <div class="locksub">输入暗号后进入。<br>（这是我们的小秘密。）</div>
-      <div class="lockrow">
-        <input class="inp" id="pwd" type="password" inputmode="numeric" placeholder="暗号" autocomplete="off" />
-        <button class="btn" id="unlockBtn">进入</button>
-      </div>
-      <div class="err" id="err">暗号不对，再想想～</div>
-    </div>
-  </div>
+  <canvas id="night-canvas" aria-hidden="true"></canvas>
 
-  <!-- 正文 -->
-  <div class="wrap" id="main" style="display:none;">
-    <div class="top">
+  <div class="wrap">
+    <div class="hero">
+      <div class="moon">🌙</div>
       <div class="title">
-        <div class="moon">🌙</div>
-        <div>
-          <h1>给宝宝的睡前故事</h1>
-          <p class="sub" id="subtitle"></p>
-        </div>
+        <h1>给宝宝的睡前故事</h1>
+        <p id="subtitle">我不在你身边，但我在你耳边。</p>
       </div>
-
-      <div class="pill" title="只是本地记录，不会上传任何信息">
-        今晚小句：<b id="quote">慢慢睡。</b>
-      </div>
+      <div class="chip" id="quoteChip">今晚小句：今天也很棒。</div>
     </div>
 
-    <div class="grid" id="list"></div>
+    <div class="status" id="statusBox"></div>
 
-    <div class="footer">
-      <div>更新方式：上传音频文件 → 修改 <b>stories.json</b>。</div>
-      <div>（你已经加了 <b>robots.txt</b> 很好：降低被搜索引擎收录概率。）</div>
+    <div class="toolbar">
+      <button class="btn primary" id="btnTonight">只看今晚</button>
+      <button class="btn" id="btnAll">查看往期</button>
+      <button class="btn ghost" id="btnFirework">放个烟花 <small>（粉紫）</small></button>
+      <button class="btn ghost" id="btnGold">金色烟花 <small>（点击也可）</small></button>
+    </div>
+
+    <div class="list" id="list"></div>
+
+    <div class="center">
+      <div class="hint">
+        更新方式：上传音频文件 → 修改 <code>stories.json</code>。<br/>
+        （你已经加了 <code>robots.txt</code> 很好：降低被搜索引擎收录概率。）
+      </div>
     </div>
   </div>
 
-  <script>
-    // =========================
-    // 0) 解锁（暗号：251223）
-    // =========================
-    const PASSWORD = "251223";
-    const KEY_UNLOCK = "goodnight_unlocked_v1";
+<script>
+(() => {
+  const STATUS = document.getElementById('statusBox');
+  const LIST = document.getElementById('list');
 
-    const lockLayer = document.getElementById("lockLayer");
-    const main = document.getElementById("main");
-    const pwd = document.getElementById("pwd");
-    const unlockBtn = document.getElementById("unlockBtn");
-    const err = document.getElementById("err");
+  const QUOTES = [
+    "把烦恼交给夜色。",
+    "闭上眼，我在。",
+    "今天也很棒。",
+    "来，把今天交给我。",
+    "呼吸慢一点，世界就慢下来。",
+    "你很努力了，真的。"
+  ];
 
-    function unlock(){
-      const v = (pwd.value || "").trim();
-      if(v === PASSWORD){
-        localStorage.setItem(KEY_UNLOCK, "1");
-        lockLayer.style.display = "none";
-        main.style.display = "block";
-        err.style.display = "none";
-        loadStories().catch(showLoadError);
-      }else{
-        err.style.display = "block";
-        pwd.focus();
-        pwd.select();
-      }
+  function showStatus(html, isError=false){
+    STATUS.classList.add('show');
+    STATUS.innerHTML = (isError ? "<b>加载失败：</b> " : "") + html;
+  }
+  function hideStatus(){
+    STATUS.classList.remove('show');
+    STATUS.innerHTML = "";
+  }
+
+  // Random quote
+  const quote = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  document.getElementById('quoteChip').textContent = "今晚小句：" + quote;
+
+  // Local storage for "heard"
+  const HEARD_KEY = "goodnight_heard_v1";
+  const heard = new Set(JSON.parse(localStorage.getItem(HEARD_KEY) || "[]"));
+
+  function markHeard(id, val){
+    if (val) heard.add(id);
+    else heard.delete(id);
+    localStorage.setItem(HEARD_KEY, JSON.stringify([...heard]));
+  }
+
+  function fmtDate(d){
+    // expecting YYYY-MM-DD
+    return d;
+  }
+
+  function safeText(s){
+    return (s ?? "").toString();
+  }
+
+  function render(items, mode="tonight"){
+    LIST.innerHTML = "";
+
+    // sort by date desc then id desc
+    items.sort((a,b) => {
+      const da = (a.date || a.id || "").toString();
+      const db = (b.date || b.id || "").toString();
+      if (db !== da) return db.localeCompare(da);
+      return (b.id || "").toString().localeCompare((a.id || "").toString());
+    });
+
+    const todayStr = new Date().toISOString().slice(0,10);
+
+    let filtered = items;
+    if (mode === "tonight") {
+      // Choose the max date as "tonight" (safer than relying on user's timezone)
+      const maxDate = items.length ? (items[0].date || items[0].id) : todayStr;
+      filtered = items.filter(x => (x.date || x.id) === maxDate);
     }
 
-    unlockBtn.addEventListener("click", unlock);
-    pwd.addEventListener("keydown", (e)=>{ if(e.key === "Enter") unlock(); });
-
-    // 已解锁过则直接进
-    if(localStorage.getItem(KEY_UNLOCK) === "1"){
-      lockLayer.style.display = "none";
-      main.style.display = "block";
-      loadStories().catch(showLoadError);
-    }else{
-      pwd.focus();
+    if (!filtered.length){
+      showStatus("没有找到故事条目。请检查 stories.json。", true);
+      return;
+    } else {
+      hideStatus();
     }
 
-    // =========================
-    // 1) 文案（更像礼物）
-    // =========================
-    const QUOTES = [
-      "慢慢睡。",
-      "闭上眼，我在。",
-      "把烦恼交给夜色。",
-      "今天也很棒。",
-      "别急，世界会等你。",
-      "晚安，宝宝。"
-    ];
-    document.getElementById("quote").textContent = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+    for (const it of filtered){
+      const id = safeText(it.id || it.date || it.title || Math.random().toString(16).slice(2));
+      const date = safeText(it.date || it.id || "");
+      const title = safeText(it.title || "未命名故事");
+      const note = safeText(it.note || "");
+      const file = safeText(it.file || "");
 
-    const SUBS = [
-      "今晚也想你。把声音留在你枕边。",
-      "我不在你身边，但我在你耳边。",
-      "这是我给你留的夜晚。只属于你。",
-      "累了就听一会儿，再慢慢睡。",
-      "来，把今天交给我。"
-    ];
-    document.getElementById("subtitle").textContent = SUBS[Math.floor(Math.random()*SUBS.length)];
+      const isHeard = heard.has(id);
 
-    // =========================
-    // 2) 已听标记（本地）
-    // =========================
-    const KEY_DONE = "goodnight_done_v2";
-    function loadDoneSet(){
-      try{ return new Set(JSON.parse(localStorage.getItem(KEY_DONE) || "[]")); }
-      catch{ return new Set(); }
-    }
-    function saveDoneSet(set){
-      localStorage.setItem(KEY_DONE, JSON.stringify(Array.from(set)));
-    }
-
-    // =========================
-    // 3) 主逻辑：排序 + 今晚 + 往期折叠 + 单音频播放
-    // =========================
-    let currentAudio = null;
-
-    function showLoadError(errObj){
-      const list = document.getElementById("list");
-      list.innerHTML = `<div class="card">加载失败：${errObj.message || errObj}</div>`;
-    }
-
-    async function loadStories(){
-      const res = await fetch("./stories.json", { cache: "no-store" });
-      if(!res.ok) throw new Error("stories.json 读取失败：" + res.status);
-
-      let stories = await res.json();
-      if(!Array.isArray(stories)) throw new Error("stories.json 必须是数组 []");
-
-      // 按日期排序：最新在上（desc）
-      stories.sort((a,b)=>{
-        const da = (a.date || "").replace(/-/g,"");
-        const db = (b.date || "").replace(/-/g,"");
-        return db.localeCompare(da);
-      });
-
-      const list = document.getElementById("list");
-      list.innerHTML = "";
-
-      const tonight = stories[0];
-      const past = stories.slice(1);
-
-      if(!tonight){
-        list.innerHTML = `<div class="card">还没有故事。把音频放进来并更新 stories.json 就好啦。</div>`;
-        return;
-      }
-
-      list.appendChild(createCard(tonight, true));
-
-      if(past.length > 0){
-        const toggleBtn = document.createElement("button");
-        toggleBtn.textContent = "查看往期";
-        toggleBtn.className = "btn secondary";
-        toggleBtn.style.margin = "18px auto 0";
-        toggleBtn.style.display = "block";
-
-        const hint = document.createElement("div");
-        hint.className = "divider";
-        hint.style.textAlign = "center";
-        hint.textContent = "往期会被折叠起来，保持今晚的仪式感。";
-
-        const pastContainer = document.createElement("div");
-        pastContainer.style.display = "none";
-        pastContainer.style.marginTop = "14px";
-        pastContainer.style.display = "none";
-
-        past.forEach(s => pastContainer.appendChild(createCard(s, false)));
-
-        toggleBtn.onclick = () => {
-          const show = pastContainer.style.display === "none";
-          pastContainer.style.display = show ? "block" : "none";
-          toggleBtn.textContent = show ? "收起往期" : "查看往期";
-        };
-
-        list.appendChild(toggleBtn);
-        list.appendChild(hint);
-        list.appendChild(pastContainer);
-      }
-    }
-
-    function createCard(s, isTonight){
-      const done = loadDoneSet();
-      const id = s.id ?? s.date ?? s.file; // 建议你以后加 id 更稳
-
-      const card = document.createElement("div");
+      const card = document.createElement('div');
       card.className = "card";
-
-      const row = document.createElement("div");
-      row.className = "row";
-
-      const left = document.createElement("div");
-      left.className = "left";
-      const head = isTonight ? "🌙 今晚故事" : "🕯 往期故事";
-      left.innerHTML = `
-        <div class="name">${head} · ${s.title ?? "未命名"}</div>
-        <p class="note">${s.date ? ("📅 " + s.date + " · ") : ""}${s.note ?? ""}</p>
+      card.innerHTML = `
+        <div class="cardHeader">
+          <div class="tagIcon">🌙</div>
+          <div class="meta">
+            <h3>${mode==="tonight" ? "今晚故事 · " : "往期故事 · "}${escapeHtml(title)}</h3>
+            <div class="sub">
+              <span class="pill">🗓 ${escapeHtml(fmtDate(date))}</span>
+              <span class="pill">${isHeard ? "已听" : "未听"}</span>
+              ${note ? `<span class="pill">${escapeHtml(note)}</span>` : ""}
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn ghost btnMark">${isHeard ? "标记未听" : "标记已听"}</button>
+          </div>
+        </div>
+        <audio controls preload="metadata">
+          <source src="${encodeURI(file)}" type="audio/mpeg">
+          你的浏览器不支持音频播放。
+        </audio>
       `;
 
-      const actions = document.createElement("div");
-      actions.className = "actions";
-
-      const badge = document.createElement("span");
-      badge.className = "badge" + (done.has(id) ? " done" : "");
-      badge.textContent = done.has(id) ? "已听过 ✅" : "未听";
-
-      const btnPlay = document.createElement("button");
-      btnPlay.className = "btn";
-      btnPlay.textContent = "播放";
-
-      const btnMark = document.createElement("button");
-      btnMark.className = "btn secondary";
-      btnMark.textContent = done.has(id) ? "取消已听" : "标记已听";
-
-      actions.appendChild(badge);
-      actions.appendChild(btnPlay);
-      actions.appendChild(btnMark);
-
-      row.appendChild(left);
-      row.appendChild(actions);
-
-      const audio = document.createElement("audio");
-      audio.controls = true;
-      audio.preload = "metadata";
-      audio.src = s.file;
-
-      // 单音频播放：新播放自动暂停旧的
-      function ensureSingle(){
-        if(currentAudio && currentAudio !== audio) currentAudio.pause();
-        currentAudio = audio;
-      }
-      btnPlay.onclick = () => { ensureSingle(); audio.play(); };
-      audio.addEventListener("play", ensureSingle);
-
-      // 手动标记
-      btnMark.onclick = () => {
-        const set = loadDoneSet();
-        if(set.has(id)) set.delete(id); else set.add(id);
-        saveDoneSet(set);
-        const has = set.has(id);
-        badge.className = "badge" + (has ? " done" : "");
-        badge.textContent = has ? "已听过 ✅" : "未听";
-        btnMark.textContent = has ? "取消已听" : "标记已听";
-      };
-
-      // 播完自动标记已听
-      audio.addEventListener("ended", () => {
-        const set = loadDoneSet();
-        if(!set.has(id)){
-          set.add(id);
-          saveDoneSet(set);
-          badge.className = "badge done";
-          badge.textContent = "已听过 ✅";
-          btnMark.textContent = "取消已听";
-        }
+      // Mark heard toggle
+      card.querySelector('.btnMark').addEventListener('click', () => {
+        const now = !heard.has(id);
+        markHeard(id, now);
+        render(items, mode);
       });
 
-      card.appendChild(row);
-      card.appendChild(audio);
-      return card;
+      // Auto mark heard when ended
+      const audio = card.querySelector('audio');
+      audio.addEventListener('ended', () => {
+        markHeard(id, true);
+        render(items, mode);
+      });
+
+      // If audio fails to load, show helpful hint
+      audio.addEventListener('error', () => {
+        showStatus(`音频加载失败：<code>${escapeHtml(file)}</code>。<br/>请确认：文件已上传到仓库根目录，且文件名与 stories.json 完全一致（大小写/空格也算）。`, true);
+      });
+
+      LIST.appendChild(card);
     }
-  </script>
+  }
+
+  function escapeHtml(str){
+    return str.replace(/[&<>"']/g, (m) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[m]));
+  }
+
+  // Load JSON with cache-bust
+  async function loadStories(){
+    try{
+      const res = await fetch("stories.json?v=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) throw new Error("stories.json 读取失败：" + res.status);
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error("stories.json 格式不对：需要是数组 []");
+      return data;
+    } catch (e){
+      showStatus(`${escapeHtml(e.message)}<br/>你可以在地址栏打开 <code>/stories.json</code> 看是否能访问。`, true);
+      return [];
+    }
+  }
+
+  // UI buttons
+  let allItems = [];
+  let mode = "tonight";
+
+  document.getElementById('btnTonight').addEventListener('click', () => {
+    mode = "tonight";
+    render(allItems, mode);
+  });
+  document.getElementById('btnAll').addEventListener('click', () => {
+    mode = "all";
+    render(allItems, mode);
+  });
+
+  // ---------- 星空 + 双风格烟花 ----------
+  const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const canvas = document.getElementById('night-canvas');
+  const ctx = canvas.getContext('2d', { alpha: true });
+
+  let W = 0, H = 0, DPR = 1;
+
+  function resizeCanvas() {
+    DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    W = Math.floor(window.innerWidth);
+    H = Math.floor(window.innerHeight);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resizeCanvas, { passive: true });
+  resizeCanvas();
+
+  const stars = [];
+  const STAR_COUNT = prefersReduced ? 60 : 160;
+  function rand(min,max){ return Math.random()*(max-min)+min; }
+
+  function initStars(){
+    stars.length = 0;
+    for(let i=0;i<STAR_COUNT;i++){
+      stars.push({
+        x: Math.random()*W,
+        y: Math.random()*H,
+        r: rand(0.6,1.6),
+        a: rand(0.25,0.9),
+        tw: rand(0.004,0.014)*(Math.random()<0.5?1:-1),
+        drift: rand(-0.015,0.015)
+      });
+    }
+  }
+  initStars();
+
+  const particles = [];
+  function spawnExplosion(x,y, style="fantasy"){
+    const count = style==="gold" ? Math.floor(rand(60,85)) : Math.floor(rand(45,70));
+    for(let i=0;i<count;i++){
+      const angle = (Math.PI*2)*(i/count) + rand(-0.06,0.06);
+      const speed = style==="gold" ? rand(1.6,4.4) : rand(1.2,3.8);
+
+      // color palettes
+      let hue, sat, light;
+      if(style==="fantasy"){
+        // dreamy pink-purple: 285~330 with occasional 260
+        hue = (Math.random()<0.15) ? rand(255,270) : rand(285,330);
+        sat = 92;
+        light = 74;
+      } else {
+        // real gold: 38~62 with slight orange flicker
+        hue = rand(38,62);
+        sat = 96;
+        light = rand(58,66);
+      }
+
+      particles.push({
+        x,y,
+        vx: Math.cos(angle)*speed,
+        vy: Math.sin(angle)*speed,
+        g: style==="gold" ? 0.055 : 0.04,
+        drag: style==="gold" ? 0.982 : 0.985,
+        a: 1,
+        fade: style==="gold" ? rand(0.010,0.020) : rand(0.008,0.018),
+        r: style==="gold" ? rand(1.4,2.3) : rand(1.2,2.1),
+        hue, sat, light,
+        sparkle: style==="gold" ? rand(0.12,0.30) : rand(0.06,0.18),
+        style
+      });
+    }
+  }
+
+  // gentle auto fantasy fireworks
+  let lastAuto = performance.now();
+  const AUTO_MS = prefersReduced ? 999999 : 9000;
+  function maybeAutoFirework(){
+    const now = performance.now();
+    if(now - lastAuto > AUTO_MS){
+      lastAuto = now;
+      if(Math.random() < 0.85){
+        spawnExplosion(rand(W*0.2,W*0.8), rand(H*0.12,H*0.42), "fantasy");
+      }
+    }
+  }
+
+  // buttons trigger
+  document.getElementById('btnFirework').addEventListener('click', () => {
+    if(prefersReduced) return;
+    spawnExplosion(rand(W*0.25,W*0.75), rand(H*0.15,H*0.45), "fantasy");
+  });
+  document.getElementById('btnGold').addEventListener('click', () => {
+    if(prefersReduced) return;
+    spawnExplosion(rand(W*0.25,W*0.75), rand(H*0.15,H*0.45), "gold");
+  });
+
+  // click triggers gold (sky area)
+  window.addEventListener('click', (e) => {
+    if(prefersReduced) return;
+    if(e.clientY < H*0.7){
+      spawnExplosion(e.clientX, e.clientY, "gold");
+    }
+  });
+
+  function drawVignette(){
+    const g = ctx.createRadialGradient(W*0.5, H*0.35, 0, W*0.5, H*0.5, Math.max(W,H));
+    g.addColorStop(0, 'rgba(10, 18, 40, 0.18)');
+    g.addColorStop(1, 'rgba(0, 0, 0, 0.58)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  function tick(){
+    ctx.clearRect(0,0,W,H);
+
+    // stars
+    for(const s of stars){
+      s.a += s.tw;
+      if(s.a < 0.15 || s.a > 0.95) s.tw *= -1;
+      s.x += s.drift;
+      if(s.x < -10) s.x = W+10;
+      if(s.x > W+10) s.x = -10;
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fill();
+    }
+
+    maybeAutoFirework();
+
+    // particles
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.vx *= p.drag;
+      p.vy *= p.drag;
+      p.vy += p.g;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.a -= p.fade;
+
+      if(p.a <= 0){
+        particles.splice(i,1);
+        continue;
+      }
+
+      // sparkle flicker (gold stronger)
+      const flicker = (Math.random() < p.sparkle) ? rand(-0.18,0.10) : 0;
+      const alpha = Math.max(0, Math.min(1, p.a + flicker));
+
+      ctx.beginPath();
+      ctx.fillStyle = `hsla(${p.hue}, ${p.sat}%, ${p.light}%, ${alpha})`;
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
+    }
+
+    drawVignette();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  // Load stories
+  (async () => {
+    allItems = await loadStories();
+    render(allItems, "tonight");
+  })();
+
+})();
+</script>
+
 </body>
 </html>
