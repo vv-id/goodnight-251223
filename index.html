@@ -9,14 +9,10 @@
     :root{
       --bg:#070a14;
       --panel:rgba(20,26,50,.55);
-      --panel2:rgba(20,26,50,.42);
       --stroke:rgba(255,255,255,.10);
       --text:rgba(255,255,255,.92);
       --muted:rgba(255,255,255,.62);
-      --muted2:rgba(255,255,255,.45);
       --accent:#7c86ff;
-      --accent2:#b28cff;
-      --btn:rgba(124,134,255,.18);
       --shadow: 0 24px 70px rgba(0,0,0,.55);
       --radius: 22px;
       --radius2: 16px;
@@ -30,10 +26,11 @@
       margin:0;
       font-family:var(--sans);
       color:var(--text);
-      background: radial-gradient(1200px 700px at 30% 15%, rgba(125,140,255,.20), transparent 60%),
-                  radial-gradient(900px 600px at 85% 20%, rgba(178,140,255,.14), transparent 60%),
-                  radial-gradient(1000px 800px at 50% 110%, rgba(0,0,0,.80), transparent 55%),
-                  var(--bg);
+      background:
+        radial-gradient(1200px 700px at 30% 15%, rgba(125,140,255,.20), transparent 60%),
+        radial-gradient(900px 600px at 85% 20%, rgba(178,140,255,.14), transparent 60%),
+        radial-gradient(1000px 800px at 50% 110%, rgba(0,0,0,.80), transparent 55%),
+        var(--bg);
       overflow-x:hidden;
     }
 
@@ -124,8 +121,6 @@
     }
     .btn:hover{transform: translateY(-1px); background: rgba(255,255,255,.06)}
     .btn.primary{background: rgba(124,134,255,.20); border-color: rgba(124,134,255,.35)}
-    .btn.ghost{background: transparent}
-    .btn small{color:var(--muted); margin-left:6px}
 
     .list{
       display:flex;
@@ -223,12 +218,9 @@
     <div class="toolbar">
       <button class="btn primary" id="btnTonight">只看今晚</button>
       <button class="btn" id="btnAll">查看往期</button>
-      <!-- 烟花按钮已移除：改为 左键金色 / 右键粉紫 -->
     </div>
 
     <div class="list" id="list"></div>
-
-    <!-- 底部提示小字整段移除 -->
   </div>
 
 <script>
@@ -269,12 +261,39 @@
   }
 
   function fmtDate(d){
-    // expecting YYYY-MM-DD
-    return d;
+    return d; // expecting YYYY-MM-DD
   }
 
   function safeText(s){
     return (s ?? "").toString();
+  }
+
+  // ---------- 音频 URL 兜底：兼容 GitHub Pages / 中文空格 / # 截断 / 自动 MIME ----------
+  function normalizeFilePath(file){
+    let f = (file ?? "").toString().trim();
+    // 项目页里 "/xxx.mp3" 会指向域名根目录，容易 404；统一改成相对
+    if (f.startsWith("/")) f = f.slice(1);
+    return f;
+  }
+
+  function guessMimeType(file){
+    const ext = (file.split(".").pop() || "").toLowerCase();
+    const map = {
+      mp3: "audio/mpeg",
+      m4a: "audio/mp4",
+      aac: "audio/aac",
+      wav: "audio/wav",
+      ogg: "audio/ogg",
+      webm: "audio/webm"
+    };
+    return map[ext] || "";
+  }
+
+  function toSafeUrl(file){
+    const f = normalizeFilePath(file);
+    // encodeURI 不会编码 # ?，会导致路径被截断；这里手动补编码
+    const encoded = encodeURI(f).replace(/#/g, "%23").replace(/\?/g, "%3F");
+    return new URL(encoded, window.location.href).href;
   }
 
   function render(items, mode="tonight"){
@@ -292,7 +311,6 @@
 
     let filtered = items;
     if (mode === "tonight") {
-      // Choose the max date as "tonight" (safer than relying on user's timezone)
       const maxDate = items.length ? (items[0].date || items[0].id) : todayStr;
       filtered = items.filter(x => (x.date || x.id) === maxDate);
     }
@@ -313,6 +331,9 @@
 
       const isHeard = heard.has(id);
 
+      const srcUrl = toSafeUrl(file);
+      const mime = guessMimeType(file);
+
       const card = document.createElement('div');
       card.className = "card";
       card.innerHTML = `
@@ -327,32 +348,33 @@
             </div>
           </div>
           <div class="actions">
-            <button class="btn ghost btnMark">${isHeard ? "标记未听" : "标记已听"}</button>
+            <button class="btn btnMark">${isHeard ? "标记未听" : "标记已听"}</button>
           </div>
         </div>
         <audio controls preload="metadata">
-          <source src="${encodeURI(file)}" type="audio/mpeg">
+          <source src="${srcUrl}" ${mime ? `type="${mime}"` : ""}>
           你的浏览器不支持音频播放。
         </audio>
       `;
 
-      // Mark heard toggle
       card.querySelector('.btnMark').addEventListener('click', () => {
         const now = !heard.has(id);
         markHeard(id, now);
         render(items, mode);
       });
 
-      // Auto mark heard when ended
       const audio = card.querySelector('audio');
       audio.addEventListener('ended', () => {
         markHeard(id, true);
         render(items, mode);
       });
 
-      // If audio fails to load, show helpful hint
       audio.addEventListener('error', () => {
-        showStatus(`音频加载失败：<code>${escapeHtml(file)}</code>。<br/>请确认：文件已上传到仓库根目录，且文件名与 stories.json 完全一致（大小写/空格也算）。`, true);
+        showStatus(
+          `音频加载失败：<code>${escapeHtml(file)}</code>。<br/>` +
+          `请确认：文件已上传到仓库同级目录（或路径写对），且文件名与 stories.json 完全一致（大小写/空格/# 也算）。`,
+          true
+        );
       });
 
       LIST.appendChild(card);
@@ -365,7 +387,6 @@
     }[m]));
   }
 
-  // Load JSON with cache-bust
   async function loadStories(){
     try{
       const res = await fetch("stories.json?v=" + Date.now(), { cache: "no-store" });
@@ -392,7 +413,7 @@
     render(allItems, mode);
   });
 
-  // ---------- 星空 + 双风格烟花 ----------
+  // ---------- 星空 + 烟花 ----------
   const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const canvas = document.getElementById('night-canvas');
@@ -433,75 +454,103 @@
   initStars();
 
   const particles = [];
+
+  function pushParticle(p){
+    particles.push(p);
+  }
+
+  // 普通爆炸：支持 gold / fantasy(pink-purple) / blue / mix(粉金蓝混合)
   function spawnExplosion(x,y, style="fantasy"){
-    const count = style==="gold" ? Math.floor(rand(60,85)) : Math.floor(rand(45,70));
+    const count = (style==="gold") ? Math.floor(rand(60,85))
+               : (style==="mix")  ? Math.floor(rand(70,95))
+               : (style==="blue") ? Math.floor(rand(55,80))
+               : Math.floor(rand(45,70));
+
     for(let i=0;i<count;i++){
       const angle = (Math.PI*2)*(i/count) + rand(-0.06,0.06);
-      const speed = style==="gold" ? rand(1.6,4.4) : rand(1.2,3.8);
+      const speed = (style==="gold") ? rand(1.6,4.4)
+                  : (style==="mix")  ? rand(1.5,4.6)
+                  : (style==="blue") ? rand(1.4,4.2)
+                  : rand(1.2,3.8);
 
-      // color palettes
+      // palette
       let hue, sat, light;
       if(style==="fantasy"){
-        // dreamy pink-purple: 285~330 with occasional 260
-        hue = (Math.random()<0.15) ? rand(255,270) : rand(285,330);
-        sat = 92;
-        light = 74;
+        hue = (Math.random()<0.15) ? rand(255,270) : rand(300,335); // 粉紫
+        sat = 92; light = 74;
+      } else if(style==="gold"){
+        hue = rand(38,62); sat = 96; light = rand(58,66);
+      } else if(style==="blue"){
+        hue = rand(195,220); sat = 92; light = rand(62,74);
       } else {
-        // real gold: 38~62 with slight orange flicker
-        hue = rand(38,62);
-        sat = 96;
-        light = rand(58,66);
+        // mix：每个粒子随机选粉/金/蓝之一
+        const pick = Math.random();
+        if(pick < 0.40){
+          hue = rand(305,335); sat = 92; light = 74; // 粉
+        } else if(pick < 0.75){
+          hue = rand(38,62); sat = 96; light = rand(58,66); // 金
+        } else {
+          hue = rand(195,220); sat = 92; light = rand(62,74); // 蓝
+        }
       }
 
-      particles.push({
+      pushParticle({
         x,y,
         vx: Math.cos(angle)*speed,
         vy: Math.sin(angle)*speed,
-        g: style==="gold" ? 0.055 : 0.04,
-        drag: style==="gold" ? 0.982 : 0.985,
+        g: (style==="gold") ? 0.055 : 0.045,
+        drag: (style==="gold") ? 0.982 : 0.985,
         a: 1,
-        fade: style==="gold" ? rand(0.010,0.020) : rand(0.008,0.018),
-        r: style==="gold" ? rand(1.4,2.3) : rand(1.2,2.1),
+        fade: (style==="gold") ? rand(0.010,0.020) : rand(0.008,0.018),
+        r: (style==="gold") ? rand(1.4,2.3) : rand(1.2,2.1),
         hue, sat, light,
-        sparkle: style==="gold" ? rand(0.12,0.30) : rand(0.06,0.18),
+        sparkle: (style==="gold") ? rand(0.12,0.30) : rand(0.06,0.20),
         style
       });
     }
   }
 
-  // gentle auto fantasy fireworks
-  let lastAuto = performance.now();
-  const AUTO_MS = prefersReduced ? 999999 : 9000;
-  function maybeAutoFirework(){
-    const now = performance.now();
-    if(now - lastAuto > AUTO_MS){
-      lastAuto = now;
-      if(Math.random() < 0.85){
-        spawnExplosion(rand(W*0.2,W*0.8), rand(H*0.12,H*0.42), "fantasy");
-      }
+  // 玫瑰烟花（rose curve）：粉+红
+  // 形状：r = A * sin(kθ)，k=5 更像“玫瑰花瓣”
+  function spawnRoseFirework(x, y){
+    const petals = 5;
+    const count = Math.floor(rand(120, 170));
+    const A = rand(20, 46); // 花瓣“半径”尺度
+    const baseSpeed = rand(0.9, 1.5); // 玫瑰更柔一点
+
+    for(let i=0;i<count;i++){
+      const t = (Math.PI*2) * (i / count);
+      const rCurve = A * Math.sin(petals * t);
+
+      // 在玫瑰曲线上取一个方向向量，并加少量噪声
+      const dx = Math.cos(t) * rCurve;
+      const dy = Math.sin(t) * rCurve;
+
+      // 速度方向沿着曲线外扩
+      const angle = Math.atan2(dy, dx) + rand(-0.12, 0.12);
+      const speed = baseSpeed * (1.0 + Math.abs(rCurve)/A) * rand(0.9, 1.25);
+
+      // 粉+红 palette
+      const pick = Math.random();
+      const hue = (pick < 0.55) ? rand(332, 348) : rand(0, 12); // 粉红 / 红
+      const sat = 92;
+      const light = (pick < 0.55) ? rand(70, 78) : rand(62, 72);
+
+      pushParticle({
+        x, y,
+        vx: Math.cos(angle)*speed,
+        vy: Math.sin(angle)*speed,
+        g: 0.032,
+        drag: 0.988,
+        a: 1,
+        fade: rand(0.007, 0.013),
+        r: rand(1.1, 2.0),
+        hue, sat, light,
+        sparkle: rand(0.05, 0.16),
+        style: "rose"
+      });
     }
   }
-
-  // 右键菜单禁用（避免右键放烟花时弹出菜单）
-  window.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-  }, { passive: false });
-
-  // 左键金色 / 右键粉紫（仅在上半屏“天空区域”触发，避免点到播放器）
-  window.addEventListener('mousedown', (e) => {
-    if(prefersReduced) return;
-
-    const skyOnly = (e.clientY < H * 0.7);
-    if(!skyOnly) return;
-
-    // 0 = 左键, 2 = 右键
-    if(e.button === 0){
-      spawnExplosion(e.clientX, e.clientY, "gold");
-    } else if(e.button === 2){
-      e.preventDefault();
-      spawnExplosion(e.clientX, e.clientY, "fantasy");
-    }
-  }, { passive: false });
 
   function drawVignette(){
     const g = ctx.createRadialGradient(W*0.5, H*0.35, 0, W*0.5, H*0.5, Math.max(W,H));
@@ -527,8 +576,6 @@
       ctx.fill();
     }
 
-    maybeAutoFirework();
-
     // particles
     for(let i=particles.length-1;i>=0;i--){
       const p = particles[i];
@@ -544,7 +591,6 @@
         continue;
       }
 
-      // sparkle flicker (gold stronger)
       const flicker = (Math.random() < p.sparkle) ? rand(-0.18,0.10) : 0;
       const alpha = Math.max(0, Math.min(1, p.a + flicker));
 
@@ -558,6 +604,79 @@
     requestAnimationFrame(tick);
   }
   tick();
+
+  // ---------- 鼠标交互：左键金 / 右键粉紫 ----------
+  window.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  }, { passive:false });
+
+  window.addEventListener('mousedown', (e) => {
+    if(prefersReduced) return;
+
+    // 只在天空区域触发（避免点到播放器）
+    if(e.clientY >= H * 0.70) return;
+
+    if(e.button === 0){
+      spawnExplosion(e.clientX, e.clientY, "gold");
+    } else if(e.button === 2){
+      e.preventDefault();
+      spawnExplosion(e.clientX, e.clientY, "fantasy");
+    }
+  }, { passive:false });
+
+  // ---------- 自动烟花：两条时间线错开 ----------
+  function randPoint(){
+    return {
+      x: rand(W*0.18, W*0.82),
+      y: rand(H*0.12, H*0.42)
+    };
+  }
+
+  function scheduleAuto(){
+    if(prefersReduced) return;
+
+    // 普通：粉+金+蓝（mix）——“约10秒2个”
+    // 做法：每 10s 触发一轮，轮内用抖动错开两个
+    const baseA = 10000;
+
+    // 玫瑰：粉+红 ——“约10秒2个”
+    const baseB = 10000;
+
+    // 初始偏移：让两条线不同时开始（错开）
+    const startOffsetA = 1200 + rand(0, 900);
+    const startOffsetB = 5200 + rand(0, 1100);
+
+    function fireNormalRound(){
+      const p1 = randPoint();
+      const p2 = randPoint();
+
+      spawnExplosion(p1.x, p1.y, "mix");
+      setTimeout(() => {
+        const p = randPoint();
+        spawnExplosion(p.x, p.y, "mix");
+      }, 1200 + rand(0, 1400)); // 错开
+
+      // 下一轮带轻微随机，避免机械
+      setTimeout(fireNormalRound, baseA + rand(-900, 1200));
+    }
+
+    function fireRoseRound(){
+      const p1 = randPoint();
+      const p2 = randPoint();
+
+      spawnRoseFirework(p1.x, p1.y);
+      setTimeout(() => {
+        const p = randPoint();
+        spawnRoseFirework(p.x, p.y);
+      }, 1400 + rand(0, 1600)); // 错开
+
+      setTimeout(fireRoseRound, baseB + rand(-900, 1200));
+    }
+
+    setTimeout(fireNormalRound, startOffsetA);
+    setTimeout(fireRoseRound, startOffsetB);
+  }
+  scheduleAuto();
 
   // Load stories
   (async () => {
