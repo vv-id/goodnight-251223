@@ -8,11 +8,10 @@
   <style>
     :root{
       --bg:#070a14;
-      --panel:rgba(20,26,50,.55);
       --stroke:rgba(255,255,255,.10);
       --text:rgba(255,255,255,.92);
       --muted:rgba(255,255,255,.62);
-      --accent:#7c86ff;
+      --muted2:rgba(255,255,255,.45);
       --shadow: 0 24px 70px rgba(0,0,0,.55);
       --radius: 22px;
       --radius2: 16px;
@@ -34,7 +33,7 @@
       overflow-x:hidden;
     }
 
-    /* Canvas sits behind everything */
+    /* Canvas behind everything */
     #night-canvas{position:fixed; inset:0; z-index:0; pointer-events:none;}
 
     .wrap{
@@ -260,46 +259,38 @@
     localStorage.setItem(HEARD_KEY, JSON.stringify([...heard]));
   }
 
-  function fmtDate(d){
-    return d; // expecting YYYY-MM-DD
-  }
-
-  function safeText(s){
-    return (s ?? "").toString();
-  }
+  function fmtDate(d){ return d; }
+  function safeText(s){ return (s ?? "").toString(); }
 
   // ---------- 音频 URL 兜底：兼容 GitHub Pages / 中文空格 / # 截断 / 自动 MIME ----------
   function normalizeFilePath(file){
     let f = (file ?? "").toString().trim();
-    // 项目页里 "/xxx.mp3" 会指向域名根目录，容易 404；统一改成相对
-    if (f.startsWith("/")) f = f.slice(1);
+    if (f.startsWith("/")) f = f.slice(1); // 项目页避免 404
     return f;
   }
-
   function guessMimeType(file){
     const ext = (file.split(".").pop() || "").toLowerCase();
     const map = {
-      mp3: "audio/mpeg",
-      m4a: "audio/mp4",
-      aac: "audio/aac",
-      wav: "audio/wav",
-      ogg: "audio/ogg",
-      webm: "audio/webm"
+      mp3:"audio/mpeg", m4a:"audio/mp4", aac:"audio/aac",
+      wav:"audio/wav", ogg:"audio/ogg", webm:"audio/webm"
     };
     return map[ext] || "";
   }
-
   function toSafeUrl(file){
     const f = normalizeFilePath(file);
-    // encodeURI 不会编码 # ?，会导致路径被截断；这里手动补编码
     const encoded = encodeURI(f).replace(/#/g, "%23").replace(/\?/g, "%3F");
     return new URL(encoded, window.location.href).href;
+  }
+
+  function escapeHtml(str){
+    return str.replace(/[&<>"']/g, (m) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[m]));
   }
 
   function render(items, mode="tonight"){
     LIST.innerHTML = "";
 
-    // sort by date desc then id desc
     items.sort((a,b) => {
       const da = (a.date || a.id || "").toString();
       const db = (b.date || b.id || "").toString();
@@ -308,8 +299,8 @@
     });
 
     const todayStr = new Date().toISOString().slice(0,10);
-
     let filtered = items;
+
     if (mode === "tonight") {
       const maxDate = items.length ? (items[0].date || items[0].id) : todayStr;
       filtered = items.filter(x => (x.date || x.id) === maxDate);
@@ -318,9 +309,7 @@
     if (!filtered.length){
       showStatus("没有找到故事条目。请检查 stories.json。", true);
       return;
-    } else {
-      hideStatus();
-    }
+    } else hideStatus();
 
     for (const it of filtered){
       const id = safeText(it.id || it.date || it.title || Math.random().toString(16).slice(2));
@@ -330,7 +319,6 @@
       const file = safeText(it.file || "");
 
       const isHeard = heard.has(id);
-
       const srcUrl = toSafeUrl(file);
       const mime = guessMimeType(file);
 
@@ -381,12 +369,6 @@
     }
   }
 
-  function escapeHtml(str){
-    return str.replace(/[&<>"']/g, (m) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[m]));
-  }
-
   async function loadStories(){
     try{
       const res = await fetch("stories.json?v=" + Date.now(), { cache: "no-store" });
@@ -413,15 +395,17 @@
     render(allItems, mode);
   });
 
-  // ---------- 星空 + 烟花 ----------
+  // =========================
+  // 星空 + 升空烟花（自动）+ 手动点爆
+  // =========================
   const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const canvas = document.getElementById('night-canvas');
   const ctx = canvas.getContext('2d', { alpha: true });
 
-  let W = 0, H = 0, DPR = 1;
+  let W=0, H=0, DPR=1;
 
-  function resizeCanvas() {
+  function resizeCanvas(){
     DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     W = Math.floor(window.innerWidth);
     H = Math.floor(window.innerHeight);
@@ -429,14 +413,17 @@
     canvas.style.height = H + 'px';
     canvas.width = Math.floor(W * DPR);
     canvas.height = Math.floor(H * DPR);
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
   }
-  window.addEventListener('resize', resizeCanvas, { passive: true });
+  window.addEventListener('resize', resizeCanvas, { passive:true });
   resizeCanvas();
 
+  function rand(min,max){ return Math.random()*(max-min)+min; }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  // Stars
   const stars = [];
   const STAR_COUNT = prefersReduced ? 60 : 160;
-  function rand(min,max){ return Math.random()*(max-min)+min; }
 
   function initStars(){
     stars.length = 0;
@@ -453,13 +440,22 @@
   }
   initStars();
 
+  // Particles
   const particles = [];
+  function pushParticle(p){ particles.push(p); }
 
-  function pushParticle(p){
-    particles.push(p);
+  // Rockets (升空主体)
+  const rockets = [];
+
+  function drawVignette(){
+    const g = ctx.createRadialGradient(W*0.5, H*0.35, 0, W*0.5, H*0.5, Math.max(W,H));
+    g.addColorStop(0, 'rgba(10, 18, 40, 0.18)');
+    g.addColorStop(1, 'rgba(0, 0, 0, 0.58)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
   }
 
-  // 普通爆炸：支持 gold / fantasy(pink-purple) / blue / mix(粉金蓝混合)
+  // ----------- 爆炸：普通（含 mix/blue/gold/fantasy）-----------
   function spawnExplosion(x,y, style="fantasy"){
     const count = (style==="gold") ? Math.floor(rand(60,85))
                : (style==="mix")  ? Math.floor(rand(70,95))
@@ -473,7 +469,6 @@
                   : (style==="blue") ? rand(1.4,4.2)
                   : rand(1.2,3.8);
 
-      // palette
       let hue, sat, light;
       if(style==="fantasy"){
         hue = (Math.random()<0.15) ? rand(255,270) : rand(300,335); // 粉紫
@@ -483,15 +478,10 @@
       } else if(style==="blue"){
         hue = rand(195,220); sat = 92; light = rand(62,74);
       } else {
-        // mix：每个粒子随机选粉/金/蓝之一
         const pick = Math.random();
-        if(pick < 0.40){
-          hue = rand(305,335); sat = 92; light = 74; // 粉
-        } else if(pick < 0.75){
-          hue = rand(38,62); sat = 96; light = rand(58,66); // 金
-        } else {
-          hue = rand(195,220); sat = 92; light = rand(62,74); // 蓝
-        }
+        if(pick < 0.40){ hue = rand(305,335); sat = 92; light = 74; } // 粉
+        else if(pick < 0.75){ hue = rand(38,62); sat = 96; light = rand(58,66); } // 金
+        else { hue = rand(195,220); sat = 92; light = rand(62,74); } // 蓝
       }
 
       pushParticle({
@@ -510,56 +500,223 @@
     }
   }
 
-  // 玫瑰烟花（rose curve）：粉+红
-  // 形状：r = A * sin(kθ)，k=5 更像“玫瑰花瓣”
-  function spawnRoseFirework(x, y){
+  // ----------- 玫瑰烟花：更“久”（更慢 fade）-----------
+  function spawnRoseFirework(x,y){
     const petals = 5;
-    const count = Math.floor(rand(120, 170));
-    const A = rand(20, 46); // 花瓣“半径”尺度
-    const baseSpeed = rand(0.9, 1.5); // 玫瑰更柔一点
+    const count = Math.floor(rand(140, 190));
+    const A = rand(22, 52);
+    const baseSpeed = rand(0.85, 1.35);
+
+    // 花心轻闪一下（更浪漫）
+    for(let k=0;k<20;k++){
+      const ang = rand(0, Math.PI*2);
+      const sp = rand(0.3, 1.2);
+      pushParticle({
+        x,y,
+        vx: Math.cos(ang)*sp,
+        vy: Math.sin(ang)*sp,
+        g: 0.015,
+        drag: 0.990,
+        a: 1,
+        fade: rand(0.004, 0.008),  // 也更久
+        r: rand(1.2, 2.4),
+        hue: rand(335, 350),
+        sat: 92,
+        light: rand(72, 82),
+        sparkle: rand(0.05, 0.12),
+        style:"rose_core"
+      });
+    }
 
     for(let i=0;i<count;i++){
       const t = (Math.PI*2) * (i / count);
       const rCurve = A * Math.sin(petals * t);
 
-      // 在玫瑰曲线上取一个方向向量，并加少量噪声
       const dx = Math.cos(t) * rCurve;
       const dy = Math.sin(t) * rCurve;
 
-      // 速度方向沿着曲线外扩
       const angle = Math.atan2(dy, dx) + rand(-0.12, 0.12);
       const speed = baseSpeed * (1.0 + Math.abs(rCurve)/A) * rand(0.9, 1.25);
 
-      // 粉+红 palette
       const pick = Math.random();
-      const hue = (pick < 0.55) ? rand(332, 348) : rand(0, 12); // 粉红 / 红
+      const hue = (pick < 0.55) ? rand(332, 350) : rand(0, 12); // 粉/红
       const sat = 92;
-      const light = (pick < 0.55) ? rand(70, 78) : rand(62, 72);
+      const light = (pick < 0.55) ? rand(70, 80) : rand(62, 74);
 
       pushParticle({
         x, y,
         vx: Math.cos(angle)*speed,
         vy: Math.sin(angle)*speed,
-        g: 0.032,
-        drag: 0.988,
+        g: 0.026,
+        drag: 0.991,
         a: 1,
-        fade: rand(0.007, 0.013),
-        r: rand(1.1, 2.0),
+        fade: rand(0.0035, 0.0075), // 关键：更慢消散（更久）
+        r: rand(1.1, 2.1),
         hue, sat, light,
         sparkle: rand(0.05, 0.16),
-        style: "rose"
+        style:"rose"
       });
     }
   }
 
-  function drawVignette(){
-    const g = ctx.createRadialGradient(W*0.5, H*0.35, 0, W*0.5, H*0.5, Math.max(W,H));
-    g.addColorStop(0, 'rgba(10, 18, 40, 0.18)');
-    g.addColorStop(1, 'rgba(0, 0, 0, 0.58)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0,W,H);
+  // ----------- 爱心烟花（粉色）-----------
+  function spawnHeartFirework(x,y){
+    // 心形曲线参数方程：x = 16 sin^3 t, y = 13 cos t - 5 cos 2t - 2 cos 3t - cos 4t
+    const count = Math.floor(rand(150, 210));
+    const scale = rand(1.25, 1.75);
+    const baseSpeed = rand(0.85, 1.25);
+
+    for(let i=0;i<count;i++){
+      const t = (Math.PI*2) * (i / count);
+      const sx = 16 * Math.pow(Math.sin(t), 3);
+      const sy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+
+      // 画面 y 轴向下，所以要把 sy 翻一下
+      const px = sx * scale;
+      const py = -sy * scale;
+
+      // 粒子位置在心形上，速度向外（从中心指向该点）
+      const ang = Math.atan2(py, px) + rand(-0.10, 0.10);
+      const sp = baseSpeed * (0.8 + rand(0, 0.7));
+
+      // 让心形更“圆润”：靠近尖角的地方速度稍弱
+      const w = clamp(1 - Math.abs(Math.sin(t))*0.25, 0.6, 1.0);
+      const speed = sp * w;
+
+      pushParticle({
+        x: x + px,
+        y: y + py,
+        vx: Math.cos(ang)*speed,
+        vy: Math.sin(ang)*speed,
+        g: 0.020,
+        drag: 0.992,
+        a: 1,
+        fade: rand(0.0045, 0.010),
+        r: rand(1.1, 2.0),
+        hue: rand(330, 350), // 粉
+        sat: 92,
+        light: rand(70, 82),
+        sparkle: rand(0.06, 0.18),
+        style:"heart"
+      });
+    }
+
+    // 轻微花心亮点
+    for(let k=0;k<18;k++){
+      const ang = rand(0, Math.PI*2);
+      const sp = rand(0.2, 1.0);
+      pushParticle({
+        x,y,
+        vx: Math.cos(ang)*sp,
+        vy: Math.sin(ang)*sp,
+        g: 0.012,
+        drag: 0.993,
+        a: 1,
+        fade: rand(0.006, 0.012),
+        r: rand(1.0, 2.2),
+        hue: rand(330, 350),
+        sat: 92,
+        light: rand(74, 86),
+        sparkle: rand(0.05, 0.14),
+        style:"heart_core"
+      });
+    }
   }
 
+  // ----------- 升空火箭（动线合理：底部起飞 → 顶部炸开）-----------
+  function launchRocket(kind){
+    // kind: "mix" | "rose" | "heart"
+    const x0 = rand(W*0.18, W*0.82);
+    const y0 = H + rand(20, 80); // 从屏幕下方开始
+    const targetY = rand(H*0.12, H*0.42); // 合理爆炸高度
+    const drift = rand(-0.35, 0.35); // 轻微横向飘
+    const upSpeed = rand(6.8, 9.6); // 初速度
+
+    const color = (kind==="rose" || kind==="heart")
+      ? { hue: rand(332, 350), sat: 92, light: 72 }
+      : { hue: rand(38, 62), sat: 96, light: 62 };
+
+    rockets.push({
+      x: x0,
+      y: y0,
+      vx: drift,
+      vy: -upSpeed,
+      targetY,
+      kind,
+      hue: color.hue,
+      sat: color.sat,
+      light: color.light,
+      life: 0
+    });
+  }
+
+  function explodeRocket(r){
+    if(r.kind === "mix"){
+      spawnExplosion(r.x, r.y, "mix");
+    } else if(r.kind === "rose"){
+      spawnRoseFirework(r.x, r.y);
+    } else if(r.kind === "heart"){
+      spawnHeartFirework(r.x, r.y);
+    }
+  }
+
+  // ----------- 自动节奏（错开）-----------
+  function scheduleAuto(){
+    if(prefersReduced) return;
+
+    // 1) 普通（mix：粉+金+蓝）——约10秒2个
+    const normalBase = 10000;
+    const normalStart = 1200 + rand(0, 900);
+
+    // 2) 玫瑰（粉+红）——约10秒2个，错开
+    const roseBase = 10000;
+    const roseStart = 5200 + rand(0, 1100);
+
+    // 3) 爱心（粉）——约5秒2个
+    const heartBase = 5000;
+    const heartStart = 2600 + rand(0, 700);
+
+    function normalRound(){
+      launchRocket("mix");
+      setTimeout(() => launchRocket("mix"), 1300 + rand(0, 1500));
+      setTimeout(normalRound, normalBase + rand(-900, 1200));
+    }
+
+    function roseRound(){
+      launchRocket("rose");
+      setTimeout(() => launchRocket("rose"), 1500 + rand(0, 1600));
+      setTimeout(roseRound, roseBase + rand(-900, 1200));
+    }
+
+    function heartRound(){
+      launchRocket("heart");
+      setTimeout(() => launchRocket("heart"), 700 + rand(0, 900));
+      setTimeout(heartRound, heartBase + rand(-450, 650));
+    }
+
+    setTimeout(normalRound, normalStart);
+    setTimeout(roseRound, roseStart);
+    setTimeout(heartRound, heartStart);
+  }
+  scheduleAuto();
+
+  // ----------- 手动交互：左键金 / 右键粉紫（直接点爆，不走升空）-----------
+  window.addEventListener('contextmenu', (e) => e.preventDefault(), { passive:false });
+
+  window.addEventListener('mousedown', (e) => {
+    if(prefersReduced) return;
+    // 只在天空区域触发，避免点到播放器
+    if(e.clientY >= H * 0.70) return;
+
+    if(e.button === 0){
+      spawnExplosion(e.clientX, e.clientY, "gold");
+    } else if(e.button === 2){
+      e.preventDefault();
+      spawnExplosion(e.clientX, e.clientY, "fantasy");
+    }
+  }, { passive:false });
+
+  // ----------- 主循环（含火箭升空）-----------
   function tick(){
     ctx.clearRect(0,0,W,H);
 
@@ -574,6 +731,64 @@
       ctx.fillStyle = `rgba(255,255,255,${s.a})`;
       ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
       ctx.fill();
+    }
+
+    // rockets
+    for(let i=rockets.length-1;i>=0;i--){
+      const r = rockets[i];
+      r.life += 1;
+
+      // 空气阻力 + 重力（让动线更合理：上升变慢）
+      r.vx *= 0.996;
+      r.vy *= 0.996;
+      r.vy += 0.030; // 重力（下拉）
+
+      r.x += r.vx;
+      r.y += r.vy;
+
+      // 尾焰拖尾（从火箭身后喷出）
+      const tailCount = 3;
+      for(let k=0;k<tailCount;k++){
+        const jitterX = rand(-0.8, 0.8);
+        const jitterY = rand(-0.8, 0.8);
+        const hue = (r.kind==="mix")
+          ? (Math.random()<0.5 ? rand(38,62) : rand(305,335))
+          : r.hue;
+
+        pushParticle({
+          x: r.x + jitterX,
+          y: r.y + jitterY,
+          vx: rand(-0.25, 0.25) - r.vx*0.15,
+          vy: rand(0.6, 1.4) - r.vy*0.10,
+          g: 0.020,
+          drag: 0.965,
+          a: 0.9,
+          fade: rand(0.035, 0.060),
+          r: rand(1.2, 2.2),
+          hue,
+          sat: 90,
+          light: rand(55, 72),
+          sparkle: rand(0.05, 0.12),
+          style: "trail"
+        });
+      }
+
+      // 火箭头（小亮点）
+      ctx.beginPath();
+      ctx.fillStyle = `hsla(${r.hue}, ${r.sat}%, ${r.light}%, 0.95)`;
+      ctx.arc(r.x, r.y, 1.8, 0, Math.PI*2);
+      ctx.fill();
+
+      // 到达目标高度 或 上升速度接近停止 时爆炸
+      if(r.y <= r.targetY || r.vy > -0.6){
+        explodeRocket(r);
+        rockets.splice(i,1);
+      }
+
+      // 越界保护
+      if(r.life > 260){
+        rockets.splice(i,1);
+      }
     }
 
     // particles
@@ -604,79 +819,6 @@
     requestAnimationFrame(tick);
   }
   tick();
-
-  // ---------- 鼠标交互：左键金 / 右键粉紫 ----------
-  window.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-  }, { passive:false });
-
-  window.addEventListener('mousedown', (e) => {
-    if(prefersReduced) return;
-
-    // 只在天空区域触发（避免点到播放器）
-    if(e.clientY >= H * 0.70) return;
-
-    if(e.button === 0){
-      spawnExplosion(e.clientX, e.clientY, "gold");
-    } else if(e.button === 2){
-      e.preventDefault();
-      spawnExplosion(e.clientX, e.clientY, "fantasy");
-    }
-  }, { passive:false });
-
-  // ---------- 自动烟花：两条时间线错开 ----------
-  function randPoint(){
-    return {
-      x: rand(W*0.18, W*0.82),
-      y: rand(H*0.12, H*0.42)
-    };
-  }
-
-  function scheduleAuto(){
-    if(prefersReduced) return;
-
-    // 普通：粉+金+蓝（mix）——“约10秒2个”
-    // 做法：每 10s 触发一轮，轮内用抖动错开两个
-    const baseA = 10000;
-
-    // 玫瑰：粉+红 ——“约10秒2个”
-    const baseB = 10000;
-
-    // 初始偏移：让两条线不同时开始（错开）
-    const startOffsetA = 1200 + rand(0, 900);
-    const startOffsetB = 5200 + rand(0, 1100);
-
-    function fireNormalRound(){
-      const p1 = randPoint();
-      const p2 = randPoint();
-
-      spawnExplosion(p1.x, p1.y, "mix");
-      setTimeout(() => {
-        const p = randPoint();
-        spawnExplosion(p.x, p.y, "mix");
-      }, 1200 + rand(0, 1400)); // 错开
-
-      // 下一轮带轻微随机，避免机械
-      setTimeout(fireNormalRound, baseA + rand(-900, 1200));
-    }
-
-    function fireRoseRound(){
-      const p1 = randPoint();
-      const p2 = randPoint();
-
-      spawnRoseFirework(p1.x, p1.y);
-      setTimeout(() => {
-        const p = randPoint();
-        spawnRoseFirework(p.x, p.y);
-      }, 1400 + rand(0, 1600)); // 错开
-
-      setTimeout(fireRoseRound, baseB + rand(-900, 1200));
-    }
-
-    setTimeout(fireNormalRound, startOffsetA);
-    setTimeout(fireRoseRound, startOffsetB);
-  }
-  scheduleAuto();
 
   // Load stories
   (async () => {
