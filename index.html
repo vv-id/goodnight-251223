@@ -197,33 +197,6 @@
       background: rgba(255,255,255,.92);
     }
 
-    .hint{
-      margin-top: 16px;
-      color: var(--muted2);
-      font-size: 13px;
-      line-height: 1.7;
-    }
-    .hint code{
-      font-family: var(--mono);
-      padding: 2px 6px;
-      border-radius: 8px;
-      background: rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.10);
-      color: var(--muted);
-    }
-
-    .center{
-      display:grid;
-      place-items:center;
-      margin: 18px 0 0;
-    }
-
-    .fold{
-      display:flex;
-      justify-content:center;
-      margin: 18px 0 0;
-    }
-
     @media (max-width: 720px){
       .title h1{font-size: 34px;}
       .chip{display:none}
@@ -250,18 +223,12 @@
     <div class="toolbar">
       <button class="btn primary" id="btnTonight">只看今晚</button>
       <button class="btn" id="btnAll">查看往期</button>
-      <button class="btn ghost" id="btnFirework">放个烟花 <small>（粉紫）</small></button>
-      <button class="btn ghost" id="btnGold">金色烟花 <small>（点击也可）</small></button>
+      <!-- 烟花按钮已移除：改为 左键金色 / 右键粉紫 -->
     </div>
 
     <div class="list" id="list"></div>
 
-    <div class="center">
-      <div class="hint">
-        更新方式：上传音频文件 → 修改 <code>stories.json</code>。<br/>
-        （你已经加了 <code>robots.txt</code> 很好：降低被搜索引擎收录概率。）
-      </div>
-    </div>
+    <!-- 底部提示小字整段移除 -->
   </div>
 
 <script>
@@ -515,23 +482,26 @@
     }
   }
 
-  // buttons trigger
-  document.getElementById('btnFirework').addEventListener('click', () => {
-    if(prefersReduced) return;
-    spawnExplosion(rand(W*0.25,W*0.75), rand(H*0.15,H*0.45), "fantasy");
-  });
-  document.getElementById('btnGold').addEventListener('click', () => {
-    if(prefersReduced) return;
-    spawnExplosion(rand(W*0.25,W*0.75), rand(H*0.15,H*0.45), "gold");
-  });
+  // 右键菜单禁用（避免右键放烟花时弹出菜单）
+  window.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  }, { passive: false });
 
-  // click triggers gold (sky area)
-  window.addEventListener('click', (e) => {
+  // 左键金色 / 右键粉紫（仅在上半屏“天空区域”触发，避免点到播放器）
+  window.addEventListener('mousedown', (e) => {
     if(prefersReduced) return;
-    if(e.clientY < H*0.7){
+
+    const skyOnly = (e.clientY < H * 0.7);
+    if(!skyOnly) return;
+
+    // 0 = 左键, 2 = 右键
+    if(e.button === 0){
       spawnExplosion(e.clientX, e.clientY, "gold");
+    } else if(e.button === 2){
+      e.preventDefault();
+      spawnExplosion(e.clientX, e.clientY, "fantasy");
     }
-  });
+  }, { passive: false });
 
   function drawVignette(){
     const g = ctx.createRadialGradient(W*0.5, H*0.35, 0, W*0.5, H*0.5, Math.max(W,H));
