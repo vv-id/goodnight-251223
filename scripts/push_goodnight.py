@@ -6,9 +6,9 @@ from zoneinfo import ZoneInfo
 # 判断当前是否 San Diego 时间 10:00
 now_sd = datetime.now(ZoneInfo("America/Los_Angeles"))
 
-if now_sd.hour != 10:
-    print("Not 10AM in San Diego, exit.")
-    exit()
+#if now_sd.hour != 10:
+    #print("Not 10AM in San Diego, exit.")
+    #exit()
 # ====== 读取环境变量 ======
 SENDKEY = os.environ.get("SERVERCHAN_SENDKEY")
 API_BASE = os.environ.get("GOODNIGHT_API_BASE")
@@ -80,3 +80,4 @@ r = requests.post(api, data={
 })
 
 print(r.text)
+
