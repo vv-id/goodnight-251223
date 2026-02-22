@@ -1,0 +1,31 @@
+name: Push Goodnight
+
+on:
+  schedule:
+   
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install requests
+      - name: Run push script
+        env:
+          SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+          CITY: ${{ vars.CITY }}
+          LAT: ${{ vars.LAT }}
+          LON: ${{ vars.LON }}
+          GOODNIGHT_API_BASE: ${{ vars.GOODNIGHT_API_BASE }}
+          GOODNIGHT_USER: ${{ vars.GOODNIGHT_USER }}
+        run: |
+          python scripts/push_goodnight.py
