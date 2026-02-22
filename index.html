@@ -190,72 +190,67 @@
       background: rgba(255,255,255,.92);
     }
 
-    /* ===== 右下角天空龙面板（约 8cm x 8cm） ===== */
-    .dragonDock{
+    /* ===== 右下角 2D 桌宠：Sky Dragon（趴姿） ===== */
+    .petDock{
       position: fixed;
       right: 14px;
       bottom: 14px;
       width: 8cm;
       height: 8cm;
-      max-width: 320px;
-      max-height: 320px;
+      max-width: 330px;
+      max-height: 330px;
       min-width: 220px;
       min-height: 220px;
-      z-index: 2;
+      z-index: 9999;
+
       border-radius: 22px;
       border: 1px solid rgba(255,255,255,.10);
       background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
       box-shadow: 0 18px 55px rgba(0,0,0,.35);
       backdrop-filter: blur(12px);
       overflow: hidden;
-      pointer-events: none; /* 不挡住页面交互 */
+
+      pointer-events: auto; /* 允许拖拽 */
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      cursor: grab;
     }
-    .dragonHint{
+    .petDock:active{ cursor: grabbing; }
+
+    .petHint{
       position:absolute;
       left:12px; top:10px;
       font-size:12px;
       color:rgba(255,255,255,.55);
       letter-spacing:.2px;
       user-select:none;
-    }
-    .dragonSvg{
-      width:100%;
-      height:100%;
-      display:block;
+      pointer-events:none;
     }
 
-    /* 动作：呼吸 + 翅膀 + 尾巴 */
-    @keyframes dragonBreath {
-      0%,100%{ transform: translateY(0) scale(1); }
-      50%{ transform: translateY(2px) scale(1.01); }
-    }
-    @keyframes wingFlapL {
-      0%,100%{ transform: rotate(-6deg) translate(0,0); }
-      50%{ transform: rotate(10deg) translate(0,-2px); }
-    }
-    @keyframes wingFlapR {
-      0%,100%{ transform: rotate(6deg) translate(0,0); }
-      50%{ transform: rotate(-10deg) translate(0,-2px); }
-    }
-    @keyframes tailSway {
-      0%,100%{ transform: rotate(-6deg); }
-      50%{ transform: rotate(10deg); }
-    }
-    @keyframes earWiggle {
-      0%,100%{ transform: rotate(0deg); }
-      50%{ transform: rotate(6deg); }
-    }
-    .dragonBodyAnim{ transform-origin: 55% 60%; animation: dragonBreath 3.4s ease-in-out infinite; }
-    .wingL{ transform-origin: 36% 56%; animation: wingFlapL 1.25s ease-in-out infinite; }
-    .wingR{ transform-origin: 70% 56%; animation: wingFlapR 1.25s ease-in-out infinite; }
-    .tail{ transform-origin: 78% 72%; animation: tailSway 2.0s ease-in-out infinite; }
-    .ear{ transform-origin: 46% 35%; animation: earWiggle 2.8s ease-in-out infinite; }
+    .petSvg{ width:100%; height:100%; display:block; }
+
+    /* 动作 */
+    @keyframes petBreath { 0%,100%{ transform: translateY(0) scale(1);} 50%{ transform: translateY(2px) scale(1.01);} }
+    @keyframes petTail   { 0%,100%{ transform: rotate(-5deg);} 50%{ transform: rotate(8deg);} }
+    @keyframes petWingL  { 0%,100%{ transform: rotate(-2deg) translateY(0);} 50%{ transform: rotate(7deg) translateY(-1px);} }
+    @keyframes petWingR  { 0%,100%{ transform: rotate(2deg) translateY(0);} 50%{ transform: rotate(-7deg) translateY(-1px);} }
+
+    .petBody { transform-origin: 52% 62%; animation: petBreath 3.6s ease-in-out infinite; }
+    .petTail { transform-origin: 84% 62%; animation: petTail 2.4s ease-in-out infinite; }
+    .petWingL{ transform-origin: 60% 50%; animation: petWingL 1.6s ease-in-out infinite; }
+    .petWingR{ transform-origin: 66% 52%; animation: petWingR 1.6s ease-in-out infinite; }
+
+    /* 眨眼：class 切换 */
+    .petBlink .eyeOpen{ opacity:0; }
+    .petBlink .eyeClosed{ opacity:1; }
+    .eyeClosed{ opacity:0; }
 
     @media (max-width: 720px){
       .title h1{font-size: 34px;}
       .chip{display:none}
       .meta h3{font-size: 19px;}
-      .dragonDock{ right: 10px; bottom: 10px; width: 6.6cm; height: 6.6cm; min-width: 190px; min-height: 190px; }
+      .petDock{ right: 10px; bottom: 10px; width: 6.6cm; height: 6.6cm; min-width: 190px; min-height: 190px; }
     }
   </style>
 </head>
@@ -283,41 +278,31 @@
     <div class="list" id="list"></div>
   </div>
 
-  <!-- 右下角天空龙 -->
-  <div class="dragonDock" aria-hidden="true">
-    <div class="dragonHint">小龙在这陪你</div>
-    <svg class="dragonSvg" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+  <!-- 右下角 桌宠：Sky Dragon（趴姿） -->
+  <div class="petDock" id="petDock" aria-label="桌宠：天空龙">
+    <div class="petHint">拖我一下～</div>
+
+    <svg class="petSvg" id="petSvg" viewBox="0 0 360 320" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <radialGradient id="bgGlow" cx="40%" cy="30%" r="70%">
-          <stop offset="0%" stop-color="rgba(160,180,255,0.18)"/>
-          <stop offset="65%" stop-color="rgba(160,180,255,0.05)"/>
-          <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
-        </radialGradient>
-
-        <linearGradient id="plushA" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#bcd7ff"/>
-          <stop offset="55%" stop-color="#8fb5ff"/>
-          <stop offset="100%" stop-color="#6d8dff"/>
+        <!-- 2D毛绒：轻渐变（不做3D） -->
+        <linearGradient id="dragonBlue" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#cfe7ff"/>
+          <stop offset="55%" stop-color="#9cc7ff"/>
+          <stop offset="100%" stop-color="#78a7ff"/>
         </linearGradient>
 
-        <linearGradient id="plushB" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#d6e6ff"/>
-          <stop offset="70%" stop-color="#a9c3ff"/>
-          <stop offset="100%" stop-color="#7ea1ff"/>
-        </linearGradient>
-
-        <linearGradient id="wingGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#ffd6f2"/>
-          <stop offset="55%" stop-color="#d9c6ff"/>
-          <stop offset="100%" stop-color="#a9c3ff"/>
+        <linearGradient id="bellySoft" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#eff7ff"/>
+          <stop offset="100%" stop-color="#d7ecff"/>
         </linearGradient>
 
         <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="rgba(0,0,0,0.35)"/>
+          <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="rgba(0,0,0,0.32)"/>
         </filter>
 
-        <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="6" result="b"/>
+        <!-- 轻“绒”边缘：很克制 -->
+        <filter id="plushEdge" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="0.55" result="b"/>
           <feMerge>
             <feMergeNode in="b"/>
             <feMergeNode in="SourceGraphic"/>
@@ -325,94 +310,126 @@
         </filter>
       </defs>
 
-      <!-- 背景柔光 -->
-      <rect x="0" y="0" width="320" height="320" fill="url(#bgGlow)"/>
+      <!-- 背景小柔光 -->
+      <circle cx="72" cy="70" r="86" fill="rgba(160,180,255,0.12)"/>
+      <circle cx="300" cy="90" r="66" fill="rgba(255,214,242,0.08)"/>
 
-      <g class="dragonBodyAnim" filter="url(#softShadow)">
-        <!-- 尾巴（在后面） -->
-        <g class="tail">
-          <path d="M215 215
-                   C255 225, 285 245, 270 268
-                   C258 286, 230 284, 220 270
-                   C210 255, 225 245, 242 248
-                   C230 238, 212 234, 200 240
-                   C186 247, 182 264, 190 278"
-                fill="none" stroke="url(#plushB)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M260 266
-                   C268 270, 275 276, 270 284
-                   C266 291, 255 292, 248 284"
-                fill="none" stroke="#ffd6f2" stroke-width="8" stroke-linecap="round"/>
+      <g class="petBody" filter="url(#softShadow)">
+
+        <!-- 尾巴：长 + 末端白色 -->
+        <g class="petTail">
+          <path d="M250 205
+                   C300 205, 336 240, 315 270
+                   C298 294, 258 284, 260 255
+                   C262 230, 290 226, 301 240
+                   C294 216, 265 210, 240 220"
+                fill="none" stroke="url(#dragonBlue)" stroke-width="22"
+                stroke-linecap="round" stroke-linejoin="round" filter="url(#plushEdge)"/>
+          <path d="M312 266 C304 276, 288 276, 282 266"
+                fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="11"
+                stroke-linecap="round"/>
         </g>
 
-        <!-- 翅膀（后） -->
-        <g class="wingL" opacity="0.95">
-          <path d="M118 168
-                   C78 150, 58 120, 72 96
-                   C90 66, 138 78, 150 108
-                   C156 122, 147 142, 132 160"
-                fill="url(#wingGrad)" filter="url(#softGlow)"/>
-          <path d="M120 168
-                   C92 154, 78 136, 88 120"
-                fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="3" stroke-linecap="round"/>
-        </g>
+        <!-- 身体主躯干：趴着 -->
+        <path d="M120 232
+                 C120 185, 175 150, 240 156
+                 C296 161, 322 196, 314 232
+                 C306 266, 266 284, 210 284
+                 C156 284, 120 265, 120 232 Z"
+              fill="url(#dragonBlue)" filter="url(#plushEdge)"/>
 
-        <g class="wingR" opacity="0.92">
-          <path d="M200 168
-                   C242 150, 262 120, 248 96
-                   C230 66, 182 78, 170 108
-                   C164 122, 173 142, 188 160"
-                fill="url(#wingGrad)" filter="url(#softGlow)"/>
-          <path d="M200 168
-                   C228 154, 242 136, 232 120"
-                fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="3" stroke-linecap="round"/>
-        </g>
+        <!-- 肚皮 -->
+        <path d="M140 240
+                 C146 208, 188 182, 238 186
+                 C276 189, 294 212, 288 238
+                 C282 264, 250 274, 208 274
+                 C168 274, 144 260, 140 240 Z"
+              fill="url(#bellySoft)" opacity="0.95"/>
 
-        <!-- 身体 -->
-        <ellipse cx="160" cy="205" rx="92" ry="70" fill="url(#plushA)"/>
-        <ellipse cx="160" cy="212" rx="74" ry="54" fill="rgba(255,255,255,0.10)"/>
-
-        <!-- 头 -->
-        <g>
-          <ellipse cx="160" cy="138" rx="78" ry="62" fill="url(#plushB)"/>
-          <!-- 小耳朵/角 -->
-          <g class="ear">
-            <path d="M128 90 C118 70, 130 58, 148 74 C140 82, 136 88, 128 90 Z" fill="#a9c3ff"/>
-            <path d="M192 90 C202 70, 190 58, 172 74 C180 82, 184 88, 192 90 Z" fill="#a9c3ff"/>
-          </g>
-
-          <!-- 脸颊 -->
-          <ellipse cx="122" cy="152" rx="20" ry="16" fill="rgba(255,214,242,0.22)"/>
-          <ellipse cx="198" cy="152" rx="20" ry="16" fill="rgba(255,214,242,0.22)"/>
-
-          <!-- 眼睛 -->
-          <circle cx="132" cy="132" r="10" fill="rgba(20,26,50,0.75)"/>
-          <circle cx="188" cy="132" r="10" fill="rgba(20,26,50,0.75)"/>
-          <circle cx="129" cy="129" r="3" fill="rgba(255,255,255,0.85)"/>
-          <circle cx="185" cy="129" r="3" fill="rgba(255,255,255,0.85)"/>
-
-          <!-- 鼻口 -->
-          <path d="M150 158
-                   C160 166, 170 166, 180 158"
-                fill="none" stroke="rgba(20,26,50,0.55)" stroke-width="5" stroke-linecap="round"/>
-          <path d="M158 160 C160 162, 162 162, 164 160"
-                fill="none" stroke="rgba(20,26,50,0.45)" stroke-width="3" stroke-linecap="round"/>
-        </g>
-
-        <!-- 小爪爪 -->
+        <!-- 背上彩色小刺（7个） -->
         <g opacity="0.95">
-          <ellipse cx="118" cy="246" rx="18" ry="14" fill="rgba(255,255,255,0.12)"/>
-          <ellipse cx="202" cy="246" rx="18" ry="14" fill="rgba(255,255,255,0.12)"/>
-          <path d="M105 245 C112 252, 123 252, 130 245" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="3" stroke-linecap="round"/>
-          <path d="M190 245 C197 252, 208 252, 215 245" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="205" cy="150" r="10" fill="#ff5a74"/>
+          <circle cx="224" cy="145" r="10" fill="#ff8a3d"/>
+          <circle cx="244" cy="143" r="10" fill="#ffd24a"/>
+          <circle cx="264" cy="145" r="10" fill="#5fe38a"/>
+          <circle cx="282" cy="152" r="10" fill="#47c7ff"/>
+          <circle cx="296" cy="164" r="10" fill="#7b6cff"/>
+          <circle cx="306" cy="178" r="10" fill="#ff84d8"/>
         </g>
 
-        <!-- 小星星点缀 -->
-        <g opacity="0.65">
-          <circle cx="72" cy="76" r="2.6" fill="rgba(255,255,255,0.65)"/>
-          <circle cx="258" cy="74" r="2.2" fill="rgba(255,255,255,0.55)"/>
-          <circle cx="286" cy="118" r="1.8" fill="rgba(255,255,255,0.50)"/>
-          <circle cx="54" cy="130" r="1.6" fill="rgba(255,255,255,0.45)"/>
+        <!-- 白翅膀（左右） -->
+        <g class="petWingL">
+          <path d="M210 190
+                   C188 172, 170 160, 156 170
+                   C140 182, 160 208, 188 216
+                   C204 221, 216 212, 220 202 Z"
+                fill="rgba(255,255,255,0.95)" filter="url(#plushEdge)"/>
+          <path d="M206 198 C190 190, 178 184, 170 188"
+                fill="none" stroke="rgba(140,170,255,0.30)" stroke-width="3" stroke-linecap="round"/>
         </g>
+
+        <g class="petWingR">
+          <path d="M248 194
+                   C270 176, 292 170, 302 184
+                   C312 200, 288 220, 260 224
+                   C244 226, 238 212, 240 202 Z"
+                fill="rgba(255,255,255,0.90)" filter="url(#plushEdge)"/>
+          <path d="M252 200 C270 194, 284 192, 292 198"
+                fill="none" stroke="rgba(140,170,255,0.26)" stroke-width="3" stroke-linecap="round"/>
+        </g>
+
+        <!-- 四肢（趴姿） -->
+        <!-- 前爪 -->
+        <path d="M150 276
+                 C134 270, 128 254, 142 246
+                 C156 238, 176 246, 176 262
+                 C176 274, 164 280, 150 276 Z"
+              fill="url(#dragonBlue)" filter="url(#plushEdge)"/>
+        <ellipse cx="152" cy="280" rx="24" ry="16" fill="rgba(255,255,255,0.96)"/>
+        <!-- 后爪 -->
+        <path d="M262 272
+                 C248 266, 244 252, 256 244
+                 C270 236, 290 244, 290 258
+                 C290 270, 276 276, 262 272 Z"
+              fill="url(#dragonBlue)" filter="url(#plushEdge)"/>
+        <ellipse cx="270" cy="278" rx="22" ry="15" fill="rgba(255,255,255,0.92)"/>
+
+        <!-- 头：长嘴趴着朝左 -->
+        <path d="M68 230
+                 C44 214, 46 182, 72 166
+                 C102 146, 150 150, 172 174
+                 C190 196, 182 220, 154 236
+                 C126 252, 94 248, 68 230 Z"
+              fill="url(#dragonBlue)" filter="url(#plushEdge)"/>
+
+        <!-- 长嘴（更贴合） -->
+        <path d="M40 220
+                 C22 214, 22 196, 38 190
+                 C58 182, 80 190, 86 204
+                 C92 218, 74 232, 56 232
+                 C50 232, 46 228, 40 220 Z"
+              fill="url(#dragonBlue)" filter="url(#plushEdge)"/>
+
+        <!-- 白耳/小角（嘴旁白色那块） -->
+        <path d="M66 190
+                 C58 178, 66 168, 82 176
+                 C78 186, 74 190, 66 190 Z"
+              fill="rgba(255,255,255,0.92)"/>
+
+        <!-- 眼睛：开/闭 -->
+        <g id="petFace">
+          <circle class="eyeOpen" cx="112" cy="184" r="7.8" fill="rgba(20,26,50,0.78)"/>
+          <circle class="eyeOpen" cx="110" cy="182" r="2.3" fill="rgba(255,255,255,0.85)"/>
+          <path class="eyeClosed" d="M104 186 C110 192, 118 192, 124 186"
+                fill="none" stroke="rgba(20,26,50,0.55)" stroke-width="4" stroke-linecap="round"/>
+        </g>
+
+        <!-- 小鼻口 -->
+        <path d="M60 216 C70 224, 80 224, 90 216"
+              fill="none" stroke="rgba(20,26,50,0.55)" stroke-width="4" stroke-linecap="round"/>
+
+        <!-- 轻腮红 -->
+        <ellipse cx="132" cy="204" rx="14" ry="10" fill="rgba(255,214,242,0.18)"/>
       </g>
     </svg>
   </div>
@@ -454,7 +471,6 @@
     localStorage.setItem(HEARD_KEY, JSON.stringify([...heard]));
   }
 
-  function fmtDate(d){ return d; }
   function safeText(s){ return (s ?? "").toString(); }
 
   // ---------- 音频 URL 兜底：兼容 GitHub Pages / 中文空格 / # 截断 / 自动 MIME ----------
@@ -525,7 +541,7 @@
           <div class="meta">
             <h3>${mode==="tonight" ? "今晚故事 · " : "往期故事 · "}${escapeHtml(title)}</h3>
             <div class="sub">
-              <span class="pill">🗓 ${escapeHtml(fmtDate(date))}</span>
+              <span class="pill">🗓 ${escapeHtml(date)}</span>
               <span class="pill">${isHeard ? "已听" : "未听"}</span>
               ${note ? `<span class="pill">${escapeHtml(note)}</span>` : ""}
             </div>
@@ -591,7 +607,7 @@
   });
 
   // =========================
-  // 星空 + 升空烟花（自动）+ 手动点爆
+  // 星空 + 升空烟花（自动更低频）+ 手动点爆
   // =========================
   const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -618,7 +634,7 @@
 
   // Stars
   const stars = [];
-  const STAR_COUNT = prefersReduced ? 60 : 160;
+  const STAR_COUNT = prefersReduced ? 50 : 130;
 
   function initStars(){
     stars.length = 0;
@@ -638,7 +654,6 @@
   // Particles / Rockets
   const particles = [];
   const rockets = [];
-
   function pushParticle(p){ particles.push(p); }
 
   function drawVignette(){
@@ -650,23 +665,23 @@
     ctx.fillRect(0,0,W,H);
   }
 
-  // ----------- 爆炸：普通（含 mix/blue/gold/fantasy）-----------
+  // ----------- 爆炸：普通（降粒子）-----------
   function spawnExplosion(x,y, style="fantasy"){
-    const count = (style==="gold") ? Math.floor(rand(60,85))
-               : (style==="mix")  ? Math.floor(rand(70,95))
-               : (style==="blue") ? Math.floor(rand(55,80))
-               : Math.floor(rand(45,70));
+    const count = (style==="gold") ? Math.floor(rand(40,60))
+               : (style==="mix")  ? Math.floor(rand(45,65))
+               : (style==="blue") ? Math.floor(rand(38,58))
+               : Math.floor(rand(34,52));
 
     for(let i=0;i<count;i++){
       const angle = (Math.PI*2)*(i/count) + rand(-0.06,0.06);
-      const speed = (style==="gold") ? rand(1.6,4.4)
-                  : (style==="mix")  ? rand(1.5,4.6)
-                  : (style==="blue") ? rand(1.4,4.2)
-                  : rand(1.2,3.8);
+      const speed = (style==="gold") ? rand(1.4,3.8)
+                  : (style==="mix")  ? rand(1.3,4.0)
+                  : (style==="blue") ? rand(1.2,3.7)
+                  : rand(1.1,3.4);
 
       let hue, sat, light;
       if(style==="fantasy"){
-        hue = (Math.random()<0.15) ? rand(255,270) : rand(300,335); // 粉紫
+        hue = (Math.random()<0.15) ? rand(255,270) : rand(300,335);
         sat = 92; light = 74;
       } else if(style==="gold"){
         hue = rand(38,62); sat = 96; light = rand(58,66);
@@ -674,9 +689,9 @@
         hue = rand(195,220); sat = 92; light = rand(62,74);
       } else {
         const pick = Math.random();
-        if(pick < 0.40){ hue = rand(305,335); sat = 92; light = 74; } // 粉
-        else if(pick < 0.75){ hue = rand(38,62); sat = 96; light = rand(58,66); } // 金
-        else { hue = rand(195,220); sat = 92; light = rand(62,74); } // 蓝
+        if(pick < 0.40){ hue = rand(305,335); sat = 92; light = 74; }
+        else if(pick < 0.75){ hue = rand(38,62); sat = 96; light = rand(58,66); }
+        else { hue = rand(195,220); sat = 92; light = rand(62,74); }
       }
 
       pushParticle({
@@ -686,27 +701,26 @@
         g: (style==="gold") ? 0.055 : 0.045,
         drag: (style==="gold") ? 0.982 : 0.985,
         a: 1,
-        fade: (style==="gold") ? rand(0.010,0.020) : rand(0.008,0.018),
-        r: (style==="gold") ? rand(1.4,2.3) : rand(1.2,2.1),
+        fade: (style==="gold") ? rand(0.012,0.022) : rand(0.010,0.020),
+        r: (style==="gold") ? rand(1.3,2.2) : rand(1.1,2.0),
         hue, sat, light,
-        sparkle: (style==="gold") ? rand(0.12,0.30) : rand(0.06,0.20),
-        glow: rand(10, 22),
+        sparkle: (style==="gold") ? rand(0.10,0.24) : rand(0.06,0.18),
+        glow: rand(10, 20),
         style
       });
     }
   }
 
-  // ----------- 玫瑰烟花：更久（更慢 fade）-----------
+  // ----------- 玫瑰烟花（降粒子）-----------
   function spawnRoseFirework(x,y){
     const petals = 5;
-    const count = Math.floor(rand(150, 210));
+    const count = Math.floor(rand(105, 150));
     const A = rand(22, 56);
     const baseSpeed = rand(0.85, 1.35);
 
-    // 花心轻闪
-    for(let k=0;k<22;k++){
+    for(let k=0;k<16;k++){
       const ang = rand(0, Math.PI*2);
-      const sp = rand(0.3, 1.25);
+      const sp = rand(0.3, 1.05);
       pushParticle({
         x,y,
         vx: Math.cos(ang)*sp,
@@ -714,13 +728,13 @@
         g: 0.015,
         drag: 0.990,
         a: 1,
-        fade: rand(0.0038, 0.0072),
-        r: rand(1.2, 2.6),
+        fade: rand(0.0044, 0.0080),
+        r: rand(1.1, 2.3),
         hue: rand(335, 350),
         sat: 92,
         light: rand(72, 84),
         sparkle: rand(0.05, 0.12),
-        glow: rand(14, 26),
+        glow: rand(14, 24),
         style:"rose_core"
       });
     }
@@ -736,7 +750,7 @@
       const speed = baseSpeed * (1.0 + Math.abs(rCurve)/A) * rand(0.9, 1.25);
 
       const pick = Math.random();
-      const hue = (pick < 0.58) ? rand(332, 350) : rand(0, 12); // 粉/红
+      const hue = (pick < 0.58) ? rand(332, 350) : rand(0, 12);
       const sat = 92;
       const light = (pick < 0.58) ? rand(70, 82) : rand(62, 76);
 
@@ -747,19 +761,19 @@
         g: 0.024,
         drag: 0.991,
         a: 1,
-        fade: rand(0.0032, 0.0068), // 更慢=更久
-        r: rand(1.1, 2.2),
+        fade: rand(0.0036, 0.0072),
+        r: rand(1.0, 2.0),
         hue, sat, light,
-        sparkle: rand(0.05, 0.18),
-        glow: rand(14, 28),
+        sparkle: rand(0.05, 0.16),
+        glow: rand(14, 24),
         style:"rose"
       });
     }
   }
 
-  // ----------- 爱心烟花（粉色）-----------
+  // ----------- 爱心烟花（降粒子）-----------
   function spawnHeartFirework(x,y){
-    const count = Math.floor(rand(160, 230));
+    const count = Math.floor(rand(110, 160));
     const scale = rand(1.25, 1.85);
     const baseSpeed = rand(0.85, 1.25);
 
@@ -784,20 +798,20 @@
         g: 0.020,
         drag: 0.992,
         a: 1,
-        fade: rand(0.0042, 0.0092),
-        r: rand(1.1, 2.1),
+        fade: rand(0.0048, 0.0096),
+        r: rand(1.0, 1.9),
         hue: rand(330, 350),
         sat: 92,
         light: rand(70, 84),
-        sparkle: rand(0.06, 0.20),
-        glow: rand(14, 26),
+        sparkle: rand(0.06, 0.18),
+        glow: rand(14, 24),
         style:"heart"
       });
     }
 
-    for(let k=0;k<18;k++){
+    for(let k=0;k<12;k++){
       const ang = rand(0, Math.PI*2);
-      const sp = rand(0.2, 1.0);
+      const sp = rand(0.2, 0.9);
       pushParticle({
         x,y,
         vx: Math.cos(ang)*sp,
@@ -805,13 +819,13 @@
         g: 0.012,
         drag: 0.993,
         a: 1,
-        fade: rand(0.006, 0.012),
-        r: rand(1.0, 2.3),
+        fade: rand(0.007, 0.012),
+        r: rand(1.0, 2.0),
         hue: rand(330, 350),
         sat: 92,
         light: rand(74, 88),
-        sparkle: rand(0.05, 0.14),
-        glow: rand(12, 22),
+        sparkle: rand(0.05, 0.12),
+        glow: rand(12, 20),
         style:"heart_core"
       });
     }
@@ -819,13 +833,12 @@
 
   // ----------- 升空火箭 -----------
   function launchRocket(kind){
-    // kind: "mix" | "rose" | "heart"
     const x0 = rand(W*0.18, W*0.82);
     const y0 = H + rand(20, 90);
     const targetY = rand(H*0.12, H*0.42);
 
-    const upSpeed = rand(7.2, 10.2);
-    const drift0 = rand(-0.35, 0.35);
+    const upSpeed = rand(7.0, 9.4);
+    const drift0 = rand(-0.30, 0.30);
 
     const hue = (kind==="mix") ? rand(38, 62)
               : (kind==="rose"||kind==="heart") ? rand(332, 350)
@@ -843,7 +856,7 @@
       light: 72,
       life: 0,
       windPhase: rand(0, Math.PI*2),
-      windAmp: rand(0.18, 0.55)
+      windAmp: rand(0.16, 0.46)
     });
   }
 
@@ -853,36 +866,29 @@
     else if(r.kind === "heart") spawnHeartFirework(r.x, r.y);
   }
 
-  // ----------- 自动节奏（错开）-----------
+  // ----------- 自动节奏（更低频：每轮只发 1 枚）-----------
   function scheduleAuto(){
     if(prefersReduced) return;
 
-    // 普通：10 秒 ~ 2 个
-    const normalBase = 10000;
+    const normalBase = 20000; // 约 18~22s
+    const roseBase   = 27000; // 约 24~30s
+    const heartBase  = 16000; // 约 14~18s
+
     const normalStart = 1200 + rand(0, 900);
-
-    // 玫瑰：10 秒 ~ 2 个（错开）
-    const roseBase = 10000;
-    const roseStart = 5200 + rand(0, 1100);
-
-    // 爱心：5 秒 ~ 2 个
-    const heartBase = 5000;
-    const heartStart = 2600 + rand(0, 700);
+    const roseStart   = 6200 + rand(0, 900);
+    const heartStart  = 3200 + rand(0, 700);
 
     function normalRound(){
       launchRocket("mix");
-      setTimeout(() => launchRocket("mix"), 1300 + rand(0, 1500));
-      setTimeout(normalRound, normalBase + rand(-900, 1200));
+      setTimeout(normalRound, normalBase + rand(-2200, 2200));
     }
     function roseRound(){
       launchRocket("rose");
-      setTimeout(() => launchRocket("rose"), 1500 + rand(0, 1600));
-      setTimeout(roseRound, roseBase + rand(-900, 1200));
+      setTimeout(roseRound, roseBase + rand(-3000, 3000));
     }
     function heartRound(){
       launchRocket("heart");
-      setTimeout(() => launchRocket("heart"), 700 + rand(0, 900));
-      setTimeout(heartRound, heartBase + rand(-450, 650));
+      setTimeout(heartRound, heartBase + rand(-1800, 1800));
     }
 
     setTimeout(normalRound, normalStart);
@@ -907,11 +913,10 @@
     }
   }, { passive:false });
 
-  // ----------- 主循环（更高级渲染：残影 + 加法叠加 + 柔光）-----------
+  // ----------- 主循环 -----------
   function tick(){
-    // 残影清屏（比 clearRect 更高级）
     ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = "rgba(7,10,20,0.22)"; // 越小拖影越明显
+    ctx.fillStyle = "rgba(7,10,20,0.22)";
     ctx.fillRect(0,0,W,H);
 
     // stars
@@ -927,16 +932,14 @@
       ctx.fill();
     }
 
-    // rockets (升空 + 尾焰)
+    // rockets
     for(let i=rockets.length-1;i>=0;i--){
       const r = rockets[i];
       r.life += 1;
 
-      // 风场摆动（轨迹更真实）
       r.windPhase += 0.035;
       r.vx += Math.sin(r.windPhase) * r.windAmp * 0.02;
 
-      // 阻力 + 重力（上升变慢）
       r.vx *= 0.996;
       r.vy *= 0.996;
       r.vy += 0.030;
@@ -944,7 +947,7 @@
       r.x += r.vx;
       r.y += r.vy;
 
-      // 尾焰拖尾（粒子）
+      // 尾焰
       const tailCount = 3;
       for(let k=0;k<tailCount;k++){
         const jitterX = rand(-0.8, 0.8);
@@ -975,22 +978,20 @@
         });
       }
 
-      // 火箭头（小亮点）
+      // 火箭头
       ctx.beginPath();
       ctx.fillStyle = `hsla(${r.hue}, ${r.sat}%, ${r.light}%, 0.95)`;
       ctx.arc(r.x, r.y, 1.8, 0, Math.PI*2);
       ctx.fill();
 
-      // 到高度 or 上升快停时爆炸
       if(r.y <= r.targetY || r.vy > -0.6){
         explodeRocket(r);
         rockets.splice(i,1);
       }
-
       if(r.life > 260) rockets.splice(i,1);
     }
 
-    // particles：加法叠加 + 柔光
+    // particles
     ctx.globalCompositeOperation = "lighter";
     for(let i=particles.length-1;i>=0;i--){
       const p = particles[i];
@@ -1030,6 +1031,57 @@
     render(allItems, "tonight");
   })();
 
+})();
+</script>
+
+<script>
+/* ===== 桌宠：眨眼 + 拖拽 ===== */
+(() => {
+  const petDock = document.getElementById('petDock');
+  const petSvg  = document.getElementById('petSvg');
+  if(!petDock || !petSvg) return;
+
+  // 眨眼：随机（更像真实）
+  let blinking = false;
+  function blinkOnce(){
+    if(blinking) return;
+    blinking = true;
+    petSvg.classList.add('petBlink');
+    setTimeout(() => {
+      petSvg.classList.remove('petBlink');
+      blinking = false;
+    }, 140);
+  }
+  setInterval(() => { if(Math.random() < 0.35) blinkOnce(); }, 1400);
+
+  // 拖拽（用 right/bottom）
+  let dragging = false;
+  let startX=0, startY=0, startRight=0, startBottom=0;
+
+  const px = (v) => (parseFloat(String(v||"0").replace("px","")) || 0);
+
+  function onDown(e){
+    dragging = true;
+    petDock.setPointerCapture?.(e.pointerId);
+    const cs = getComputedStyle(petDock);
+    startRight = px(cs.right);
+    startBottom = px(cs.bottom);
+    startX = e.clientX;
+    startY = e.clientY;
+    e.preventDefault();
+  }
+  function onMove(e){
+    if(!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    petDock.style.right = Math.max(6, startRight - dx) + "px";
+    petDock.style.bottom = Math.max(6, startBottom - dy) + "px";
+  }
+  function onUp(){ dragging = false; }
+
+  petDock.addEventListener('pointerdown', onDown);
+  window.addEventListener('pointermove', onMove, { passive:false });
+  window.addEventListener('pointerup', onUp);
 })();
 </script>
 
