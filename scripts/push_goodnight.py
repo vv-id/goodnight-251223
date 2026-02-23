@@ -7,9 +7,9 @@ from zoneinfo import ZoneInfo
 # 1. 只在 San Diego 10:00 发送（自动适配夏令时）
 # =============================
 now_sd = datetime.now(ZoneInfo("America/Los_Angeles"))
-if now_sd.hour != 10:
-    print("Not 10AM in San Diego, exit.")
-    raise SystemExit(0)
+#if now_sd.hour != 10:
+    #print("Not 10AM in San Diego, exit.")
+    #raise SystemExit(0)
 
 # =============================
 # 2. 环境变量
@@ -120,3 +120,4 @@ title = f"""{CITY} {emoji}\n\n
 api = f"https://sctapi.ftqq.com/{SENDKEY}.send"
 r = requests.post(api, data={"title": title}, timeout=10)
 print(r.text)  # 打印响应内容，帮助调试
+
