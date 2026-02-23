@@ -3,18 +3,16 @@ import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-
 # =============================
-# 1) 只在 San Diego 10:00 发送（自动适配夏令时）
+# 1. 只在 San Diego 10:00 发送（自动适配夏令时）
 # =============================
 now_sd = datetime.now(ZoneInfo("America/Los_Angeles"))
-#if now_sd.hour != 10:
-    #print("Not 10AM in San Diego, exit.")
-    #raise SystemExit(0)
-
+if now_sd.hour != 10:
+    print("Not 10AM in San Diego, exit.")
+    raise SystemExit(0)
 
 # =============================
-# 2) 环境变量
+# 2. 环境变量
 # =============================
 SENDKEY = os.environ.get("SERVERCHAN_SENDKEY")
 CITY = os.environ.get("CITY", "San Diego")
@@ -30,17 +28,13 @@ if not (LAT and LON):
 if not API_BASE:
     raise SystemExit("Missing GOODNIGHT_API_BASE")
 
-
 # =============================
-# 3) 天气：体感 + 今日高低 + emoji
-# Open-Meteo：不需要 key
+# 3. 获取天气（Open-Meteo）
 # =============================
 weather_url = (
     "https://api.open-meteo.com/v1/forecast"
     f"?latitude={LAT}&longitude={LON}"
-    "&current=temperature_2m,apparent_temperature,weather_code"
-    "&daily=temperature_2m_max,temperature_2m_min"
-    "&timezone=America/Los_Angeles"
+    "&current_weather=true"
 )
 
 w = requests.get(weather_url, timeout=10).json()
@@ -55,9 +49,7 @@ code = cur.get("weather_code")
 tmax = (daily.get("temperature_2m_max") or [None])[0]
 tmin = (daily.get("temperature_2m_min") or [None])[0]
 
-
 def code_to_desc_and_emoji(c):
-    # Open-Meteo WMO weather codes: https://open-meteo.com/en/docs
     if c is None:
         return "未知", "❓"
     if c == 0:
@@ -80,10 +72,9 @@ def code_to_desc_and_emoji(c):
         return "雷暴", "⛈️"
     return "未知", "❓"
 
-
 weather_desc, emoji = code_to_desc_and_emoji(code)
 
-# 为了通知好看，温度统一保留 0 或 1 位小数都行；这里四舍五入到整数
+# 体感和温度格式化
 def fmt_num(x):
     return "N/A" if x is None else str(int(round(float(x))))
 
@@ -92,30 +83,40 @@ feels_s = fmt_num(feels)
 tmax_s = fmt_num(tmax)
 tmin_s = fmt_num(tmin)
 
-
 # =============================
-# 4) 获取状态：只用心情 + 睡眠（不出现人称）
+# 4. 获取状态：只用心情 + 睡眠（不出现人称）
 # =============================
 state_url = f"{API_BASE}/state?user={USER}"
-state = requests.get(state_url, timeout=10).json()
 
+print("Requesting URL:", state_url)  # 打印出请求的 URL，确认是否正确
+
+try:
+    response = requests.get(state_url, timeout=10)
+    print("Response content:", response.text)  # 打印返回的原始文本内容
+    state = response.json()  # 尝试解析返回的 JSON
+except ValueError as e:
+    print("Failed to parse JSON. Response content:", response.text)  # 如果解析失败，打印响应内容
+    state = {}  # 返回空字典
+except requests.exceptions.RequestException as e:
+    print("Request failed:", e)  # 如果请求出错，打印错误信息
+    state = {}
+
+# =============================
+# 5. 拼接通知（只用 title，多行）
+# =============================
 mood_text = (state.get("mood") or {}).get("text", "未记录")
-
 sleep_hours = (state.get("sleep") or {}).get("hours")
 sleep_line = f"{sleep_hours}h" if sleep_hours else "未同步"
 
+title = f"""{CITY} {emoji}\n\n
+🙂 {mood_text}\n
+{emoji} {temp_s}° 体感{feels_s}°  ↑{tmax_s}° ↓{tmin_s}°\n
+🛌 {sleep_line}
+"""
 
 # =============================
-# 5) 推送：通知栏尽量直出（用 title，多行）
+# 6. 发送到 Server酱
 # =============================
-title = (
-    f"{CITY} {emoji}\n\n"
-    f"🙂 {mood_text}\n"
-    f"{emoji} {temp_s}° 体感{feels_s}°  ↑{tmax_s}° ↓{tmin_s}°\n"
-    f"🛌 {sleep_line}"
-)
-
 api = f"https://sctapi.ftqq.com/{SENDKEY}.send"
 r = requests.post(api, data={"title": title}, timeout=10)
-print(r.text)
-
+print(r.text)  # 打印响应内容，帮助调试
