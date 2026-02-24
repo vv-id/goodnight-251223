@@ -1,148 +1,127 @@
 import os
+import sys
 import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+# =============================
+# 0) 只在本地指定小时推送（默认：San Diego 10:00）
+# =============================
+TZ_LOCAL = os.environ.get("LOCAL_TZ", "America/Los_Angeles")
+PUSH_HOUR_LOCAL = int(os.environ.get("PUSH_HOUR_LOCAL", "10"))
 
-def safe_get_json(url: str, timeout: int = 10, headers: dict | None = None):
-    """
-    安全获取 JSON：
-    - 返回 (data, status_code, text_snippet)
-    - 如果不是 JSON，就返回 (None, status_code, 前 300 字符)
-    """
-    resp = requests.get(url, timeout=timeout, headers=headers)
-    text = resp.text or ""
-    try:
-        return resp.json(), resp.status_code, text[:300]
-    except Exception:
-        return None, resp.status_code, text[:300]
-
-
-def fmt_num(x):
-    try:
-        return "N/A" if x is None else str(int(round(float(x))))
-    except Exception:
-        return "N/A"
-
-
-def code_to_desc_and_emoji(c):
-    # Open-Meteo WMO weather codes: https://open-meteo.com/en/docs
-    if c is None:
-        return "未知", "❓"
-    if c == 0:
-        return "晴", "☀️"
-    if c in (1, 2):
-        return "少云", "🌤️"
-    if c == 3:
-        return "多云", "☁️"
-    if c in (45, 48):
-        return "雾", "🌫️"
-    if c in (51, 53, 55, 56, 57):
-        return "毛毛雨", "🌦️"
-    if c in (61, 63, 65, 66, 67):
-        return "雨", "🌧️"
-    if c in (71, 73, 75, 77, 85, 86):
-        return "雪", "🌨️"
-    if c in (80, 81, 82):
-        return "阵雨", "🌦️"
-    if c in (95, 96, 99):
-        return "雷暴", "⛈️"
-    return "未知", "❓"
-
+now_local = datetime.now(ZoneInfo(TZ_LOCAL))
+if now_local.hour != PUSH_HOUR_LOCAL:
+    print(f"[SKIP] Local time is {now_local:%Y-%m-%d %H:%M:%S %Z}, not {PUSH_HOUR_LOCAL}:00")
+    sys.exit(0)
 
 # =============================
-# 1) San Diego 时间（自动适配夏令时）
+# 1) 环境变量
 # =============================
-now_sd = datetime.now(ZoneInfo("America/Los_Angeles"))
-
-# 如果你想只在 10 点发送，打开下面三行（现在先别开，先把流程跑通）
-# if now_sd.hour != 10:
-#     print("Not 10AM in San Diego, exit.")
-#     raise SystemExit(0)
-
-# =============================
-# 2) 环境变量
-# =============================
-SENDKEY = os.environ.get("SERVERCHAN_SENDKEY")
+SENDKEY = os.environ.get("SERVERCHAN_SENDKEY")  # Secret
 CITY = os.environ.get("CITY", "San Diego")
 LAT = os.environ.get("LAT")
 LON = os.environ.get("LON")
-API_BASE = os.environ.get("GOODNIGHT_API_BASE")
-USER = os.environ.get("GOODNIGHT_USER", "state")  # 你说不要人称，就用 state 当默认值
 
 if not SENDKEY:
-    raise SystemExit("Missing SERVERCHAN_SENDKEY")
+    raise SystemExit("Missing SERVERCHAN_SENDKEY (Repository secret)")
 if not (LAT and LON):
-    raise SystemExit("Missing LAT/LON")
-if not API_BASE:
-    raise SystemExit("Missing GOODNIGHT_API_BASE")
+    raise SystemExit("Missing LAT/LON (Repository variables)")
+
+MOOD = os.environ.get("MOOD", "😄 微笑")
+EXERCISE_TIP = os.environ.get("EXERCISE_TIP", "多运动，注意拉伸噢～")
 
 # =============================
-# 3) 天气：体感 + 今日高低 + emoji（Open-Meteo，无 key）
+# 2) Open-Meteo：当前天气（无需 key）
 # =============================
-weather_url = (
-    "https://api.open-meteo.com/v1/forecast"
-    f"?latitude={LAT}&longitude={LON}"
-    "&current=temperature_2m,apparent_temperature,weather_code"
-    "&daily=temperature_2m_max,temperature_2m_min"
-    "&timezone=America/Los_Angeles"
-)
+def weather_code_to_text(code: int) -> str:
+    mapping = {
+        0: "晴朗",
+        1: "大部晴朗",
+        2: "局部多云",
+        3: "阴",
+        45: "雾",
+        48: "冻雾",
+        51: "毛毛雨（轻）",
+        53: "毛毛雨（中）",
+        55: "毛毛雨（强）",
+        56: "冻毛毛雨（轻）",
+        57: "冻毛毛雨（强）",
+        61: "小雨",
+        63: "中雨",
+        65: "大雨",
+        66: "冻雨（轻）",
+        67: "冻雨（强）",
+        71: "小雪",
+        73: "中雪",
+        75: "大雪",
+        77: "雪粒",
+        80: "阵雨（轻）",
+        81: "阵雨（中）",
+        82: "阵雨（强）",
+        85: "阵雪（轻）",
+        86: "阵雪（强）",
+        95: "雷暴",
+        96: "雷暴（伴小冰雹）",
+        99: "雷暴（伴大冰雹）",
+    }
+    return mapping.get(code, f"未知天气（code={code}）")
 
-w, w_status, w_snip = safe_get_json(weather_url, timeout=10)
+def fetch_weather(lat: str, lon: str, tz_name: str):
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "current": "temperature_2m,apparent_temperature,weather_code",
+        "timezone": tz_name,
+        "temperature_unit": "celsius",
+    }
+    r = requests.get(url, params=params, timeout=20)
+    r.raise_for_status()
+    data = r.json()
 
-if not w:
-    # 天气 API 失败也别让整个脚本死掉
-    print(f"[WARN] Weather API not JSON. status={w_status}, body_snip={w_snip}")
-    temp_s = feels_s = tmax_s = tmin_s = "N/A"
-    weather_desc, emoji = "未知", "❓"
-else:
-    cur = w.get("current", {}) or {}
-    daily = w.get("daily", {}) or {}
-
+    cur = data.get("current", {})
     temp = cur.get("temperature_2m")
     feels = cur.get("apparent_temperature")
-    code = cur.get("weather_code")
+    wcode = cur.get("weather_code")
 
-    tmax = (daily.get("temperature_2m_max") or [None])[0]
-    tmin = (daily.get("temperature_2m_min") or [None])[0]
+    if temp is None or feels is None or wcode is None:
+        raise RuntimeError(f"Weather data missing fields: {cur}")
 
-    weather_desc, emoji = code_to_desc_and_emoji(code)
+    wtext = weather_code_to_text(int(wcode))
+    return float(temp), float(feels), wtext
 
-    temp_s = fmt_num(temp)
-    feels_s = fmt_num(feels)
-    tmax_s = fmt_num(tmax)
-    tmin_s = fmt_num(tmin)
+temp, feels, wtext = fetch_weather(LAT, LON, TZ_LOCAL)
 
 # =============================
-# 4) 获取状态：心情 + 睡眠
+# 3) 组装推送内容（Server酱 Markdown）
 # =============================
-state_url = f"{API_BASE}/state?user={USER}"
-state, s_status, s_snip = safe_get_json(state_url, timeout=10)
+title = f"{CITY} 今日提醒 ☀️"
 
-if not state:
-    # 这里就是你现在炸的地方：不是 JSON
-    print(f"[WARN] State API not JSON. status={s_status}, body_snip={s_snip}")
-    mood_text = "未记录"
-    sleep_line = "未同步"
-else:
-    mood_text = ((state.get("mood") or {}).get("text")) or "未记录"
-    sleep_hours = (state.get("sleep") or {}).get("hours")
-    sleep_line = f"{sleep_hours}h" if sleep_hours else "未同步"
+desp = "\n".join([
+    f"**当地天气（{CITY}）**",
+    f"- 气温：**{temp:.1f}°C**",
+    f"- 体感：**{feels:.1f}°C**",
+    f"- 天气：**{wtext}**",
+    "",
+    "**心情**",
+    f"- {MOOD}",
+    "",
+    "**运动提示**",
+    f"- {EXERCISE_TIP}",
+    "",
+    f"_推送时间：{now_local:%Y-%m-%d %H:%M %Z}_",
+])
 
 # =============================
-# 5) Server酱推送：title 单行，正文放 desp（避免你说的“乱码/挤成一团”）
+# 4) 调 Server酱推送
 # =============================
-title = f"{CITY} {emoji} 早安"
-desp = (
-    f"🙂 {mood_text}\n\n"
-    f"{emoji} {weather_desc}  {temp_s}°C（体感 {feels_s}°C）\n"
-    f"↑{tmax_s}°C  ↓{tmin_s}°C\n\n"
-    f"🛌 {sleep_line}\n\n"
-    f"🕙 San Diego：{now_sd.strftime('%Y-%m-%d %H:%M')}"
-)
+push_url = f"https://sctapi.ftqq.com/{SENDKEY}.send"
+payload = {"title": title, "desp": desp}
 
-api = f"https://sctapi.ftqq.com/{SENDKEY}.send"
-r = requests.post(api, data={"title": title, "desp": desp}, timeout=10)
+resp = requests.post(push_url, data=payload, timeout=20)
+resp.raise_for_status()
 
-print("[INFO] ServerChan response:")
-print(r.status_code, r.text)
+j = resp.json()
+print("[ServerChan Response]", j)
+print("[OK] Push sent.")
