@@ -5,36 +5,66 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 # =============================
-# 0) 只在本地指定小时推送（默认：San Diego 10:00）
+# 0) 时间控制
 # =============================
 TZ_LOCAL = os.environ.get("LOCAL_TZ", "America/Los_Angeles")
 PUSH_HOUR_LOCAL = int(os.environ.get("PUSH_HOUR_LOCAL", "10"))
 
 now_local = datetime.now(ZoneInfo(TZ_LOCAL))
 if now_local.hour != PUSH_HOUR_LOCAL:
-    print(f"[SKIP] Local time is {now_local:%Y-%m-%d %H:%M:%S %Z}, not {PUSH_HOUR_LOCAL}:00")
+    print(f"[SKIP] Local time is {now_local:%Y-%m-%d %H:%M:%S %Z}")
     sys.exit(0)
 
 # =============================
 # 1) 环境变量
 # =============================
-SENDKEY = os.environ.get("SERVERCHAN_SENDKEY")  # Secret
+SENDKEY = os.environ.get("SERVERCHAN_SENDKEY")
 CITY = os.environ.get("CITY", "San Diego")
 LAT = os.environ.get("LAT")
 LON = os.environ.get("LON")
 
 if not SENDKEY:
-    raise SystemExit("Missing SERVERCHAN_SENDKEY (Repository secret)")
+    raise SystemExit("Missing SERVERCHAN_SENDKEY")
 if not (LAT and LON):
-    raise SystemExit("Missing LAT/LON (Repository variables)")
+    raise SystemExit("Missing LAT/LON")
 
-MOOD = os.environ.get("MOOD", "😄 微笑")
-EXERCISE_TIP = os.environ.get("EXERCISE_TIP", "多运动，注意拉伸噢～")
+MOOD = (os.environ.get("MOOD") or "").strip()
+EXERCISE_TIP = (os.environ.get("EXERCISE_TIP") or "").strip()
 
 # =============================
-# 2) Open-Meteo：当前天气（无需 key）
+# 2) 天气获取
 # =============================
-def weather_code_to_text(code: int) -> str:
+def fetch_weather(lat, lon, tz):
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "timezone": tz,
+        "temperature_unit": "celsius",
+        "current": "temperature_2m,apparent_temperature,weather_code",
+        "daily": "temperature_2m_max,temperature_2m_min",
+    }
+    r = requests.get(url, params=params, timeout=20)
+    r.raise_for_status()
+    data = r.json()
+
+    cur = data["current"]
+    daily = data["daily"]
+
+    return (
+        float(cur["temperature_2m"]),
+        float(cur["apparent_temperature"]),
+        int(cur["weather_code"]),
+        float(daily["temperature_2m_max"][0]),
+        float(daily["temperature_2m_min"][0]),
+    )
+
+temp, feels, wcode, tmax, tmin = fetch_weather(LAT, LON, TZ_LOCAL)
+
+# =============================
+# 3) 天气分类 + emoji
+# =============================
+def weather_text(code):
     mapping = {
         0: "晴朗",
         1: "大部晴朗",
@@ -42,86 +72,113 @@ def weather_code_to_text(code: int) -> str:
         3: "阴",
         45: "雾",
         48: "冻雾",
-        51: "毛毛雨（轻）",
-        53: "毛毛雨（中）",
-        55: "毛毛雨（强）",
-        56: "冻毛毛雨（轻）",
-        57: "冻毛毛雨（强）",
+        51: "小雨",
+        53: "中雨",
+        55: "大雨",
         61: "小雨",
         63: "中雨",
         65: "大雨",
-        66: "冻雨（轻）",
-        67: "冻雨（强）",
         71: "小雪",
         73: "中雪",
         75: "大雪",
-        77: "雪粒",
-        80: "阵雨（轻）",
-        81: "阵雨（中）",
-        82: "阵雨（强）",
-        85: "阵雪（轻）",
-        86: "阵雪（强）",
+        80: "阵雨",
+        81: "阵雨",
+        82: "暴雨",
         95: "雷暴",
-        96: "雷暴（伴小冰雹）",
-        99: "雷暴（伴大冰雹）",
     }
-    return mapping.get(code, f"未知天气（code={code}）")
+    return mapping.get(code, "天气变化")
 
-def fetch_weather(lat: str, lon: str, tz_name: str):
-    url = "https://api.open-meteo.com/v1/forecast"
-    params = {
-        "latitude": lat,
-        "longitude": lon,
-        "current": "temperature_2m,apparent_temperature,weather_code",
-        "timezone": tz_name,
-        "temperature_unit": "celsius",
-    }
-    r = requests.get(url, params=params, timeout=20)
-    r.raise_for_status()
-    data = r.json()
+def weather_emoji(code):
+    if code in (0, 1, 2):
+        return "☀️"
+    if code == 3:
+        return "☁️"
+    if code in (45, 48):
+        return "🌫️"
+    if 51 <= code <= 67 or 80 <= code <= 82:
+        return "🌧️"
+    if 71 <= code <= 77:
+        return "❄️"
+    if code >= 95:
+        return "⛈️"
+    return "🌤️"
 
-    cur = data.get("current", {})
-    temp = cur.get("temperature_2m")
-    feels = cur.get("apparent_temperature")
-    wcode = cur.get("weather_code")
-
-    if temp is None or feels is None or wcode is None:
-        raise RuntimeError(f"Weather data missing fields: {cur}")
-
-    wtext = weather_code_to_text(int(wcode))
-    return float(temp), float(feels), wtext
-
-temp, feels, wtext = fetch_weather(LAT, LON, TZ_LOCAL)
+wtext = weather_text(wcode)
+emoji = weather_emoji(wcode)
 
 # =============================
-# 3) 组装推送内容（Server酱 Markdown）
+# 4) 浪漫风格一句话生成
 # =============================
-title = f"{CITY} 今日提醒 ☀️"
+def romantic_line(code, feels_temp):
+    if 51 <= code <= 67 or 80 <= code <= 82:
+        return "今天可能会下雨，记得带伞。有人希望你别淋到。"
+    if feels_temp < 8:
+        return "今天有点冷，记得多穿一点。温度低，但有人在想你。"
+    if feels_temp > 30:
+        return "天气有点热，注意补水。别太逞强。"
+    if code in (0, 1, 2):
+        return "阳光不错，愿你今天也有一点轻松。"
+    return "慢慢来的一天，也很好。"
 
-desp = "\n".join([
-    f"**当地天气（{CITY}）**",
-    f"- 气温：**{temp:.1f}°C**",
-    f"- 体感：**{feels:.1f}°C**",
-    f"- 天气：**{wtext}**",
-    "",
-    "**心情**",
-    f"- {MOOD}",
-    "",
-    "**运动提示**",
-    f"- {EXERCISE_TIP}",
-    "",
-    f"_推送时间：{now_local:%Y-%m-%d %H:%M %Z}_",
-])
+soft_line = romantic_line(wcode, feels)
+
+mood_line = MOOD if MOOD else "😊 平静而温柔"
+exercise_line = EXERCISE_TIP if EXERCISE_TIP else "多运动，注意拉伸噢～"
 
 # =============================
-# 4) 调 Server酱推送
+# 5) 组装内容
+# =============================
+title = f"{CITY} 今日提醒 {emoji}"
+
+short = (
+    f"{emoji} {wtext}｜{temp:.1f}°C "
+    f"(体感{feels:.1f})｜H{tmax:.1f} L{tmin:.1f}"
+)
+
+desp = f"""## {emoji} {CITY} 今日提醒
+
+### 🌤️ 今日天气
+- **{wtext}**
+- **当前：{temp:.1f}°C ｜ 体感：{feels:.1f}°C**
+- **最高：{tmax:.1f}°C ｜ 最低：{tmin:.1f}°C**
+
+---
+
+### 🌙 一句话
+> {soft_line}
+
+---
+
+### 😊 心情
+> {mood_line}
+
+---
+
+### 🏃 今日小提醒
+- {exercise_line}
+
+---
+
+_🕙 {now_local:%Y-%m-%d %H:%M %Z}_
+"""
+
+# =============================
+# 6) 推送
 # =============================
 push_url = f"https://sctapi.ftqq.com/{SENDKEY}.send"
-payload = {"title": title, "desp": desp}
+payload = {
+    "title": title,
+    "short": short,
+    "desp": desp,
+}
 
 resp = requests.post(push_url, data=payload, timeout=20)
 resp.raise_for_status()
 
 j = resp.json()
 print("[ServerChan Response]", j)
+
+if j.get("code") != 0:
+    raise SystemExit("Push failed")
+
 print("[OK] Push sent.")
