@@ -1,4 +1,4 @@
-name: Push Goodnight
+name: Weather Push
 
 on:
   schedule:
@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: push-goodnight
+  group: weather-push
   cancel-in-progress: true
 
 jobs:
@@ -38,19 +38,14 @@ jobs:
 
       - name: Run push script
         env:
-          # Server酱 SendKey 放在 Secrets
           SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
-
-          # 坐标等放在 Variables
           CITY: ${{ vars.CITY }}
           LAT: ${{ vars.LAT }}
           LON: ${{ vars.LON }}
 
-          # 本地时区 & 推送小时（可选，不设就用脚本默认）
+          # 可选：不填也行
           LOCAL_TZ: ${{ vars.LOCAL_TZ }}
           PUSH_HOUR_LOCAL: ${{ vars.PUSH_HOUR_LOCAL }}
-
-          # 文案（可选）
           MOOD: ${{ vars.MOOD }}
           EXERCISE_TIP: ${{ vars.EXERCISE_TIP }}
         run: |
