@@ -2,12 +2,25 @@ name: Push Goodnight
 
 on:
   schedule:
-    - cron: "0 18 * * *"  # 每天 UTC 18:00，即 San Diego 早上 10:00
+    # 覆盖 San Diego 10:00 的冬令时/夏令时：
+    # - 冬令时 PST (UTC-8): 10:00 = UTC 18:00
+    # - 夏令时 PDT (UTC-7): 10:00 = UTC 17:00
+    - cron: "0 17 * * *"
+    - cron: "0 18 * * *"
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: push-goodnight
+  cancel-in-progress: true
 
 jobs:
   push:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -16,17 +29,29 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Install dependencies
-        run: pip install requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
 
       - name: Run push script
         env:
+          # Server酱 SendKey 放在 Secrets
           SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+
+          # 坐标等放在 Variables
           CITY: ${{ vars.CITY }}
           LAT: ${{ vars.LAT }}
           LON: ${{ vars.LON }}
-          GOODNIGHT_API_BASE: ${{ vars.GOODNIGHT_API_BASE }}
-          GOODNIGHT_USER: ${{ vars.GOODNIGHT_USER }}
+
+          # 本地时区 & 推送小时（可选，不设就用脚本默认）
+          LOCAL_TZ: ${{ vars.LOCAL_TZ }}
+          PUSH_HOUR_LOCAL: ${{ vars.PUSH_HOUR_LOCAL }}
+
+          # 文案（可选）
+          MOOD: ${{ vars.MOOD }}
+          EXERCISE_TIP: ${{ vars.EXERCISE_TIP }}
         run: |
           python scripts/push_goodnight.py
