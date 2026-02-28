@@ -2,38 +2,23 @@ name: Weather Push
 
 on:
   schedule:
-    # 覆盖 San Diego 10:00 的冬令时/夏令时：
-    # - 冬令时 PST (UTC-8): 10:00 = UTC 18:00
-    # - 夏令时 PDT (UTC-7): 10:00 = UTC 17:00
-    - cron: "0 17 * * *"
-    - cron: "0 18 * * *"
+    - cron: "0 17 * * *"  # 每天 UTC 17:00 固定触发
   workflow_dispatch:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: weather-push
-  cancel-in-progress: true
 
 jobs:
   push:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          
+
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
+        run: pip install requests
 
       - name: Run push script
         env:
@@ -41,11 +26,8 @@ jobs:
           CITY: ${{ vars.CITY }}
           LAT: ${{ vars.LAT }}
           LON: ${{ vars.LON }}
-
-          # 可选：不填也行
           LOCAL_TZ: ${{ vars.LOCAL_TZ }}
           PUSH_HOUR_LOCAL: ${{ vars.PUSH_HOUR_LOCAL }}
           MOOD: ${{ vars.MOOD }}
           EXERCISE_TIP: ${{ vars.EXERCISE_TIP }}
-        run: |
-          python scripts/push_goodnight.py
+        run: python scripts/push_goodnight.py
