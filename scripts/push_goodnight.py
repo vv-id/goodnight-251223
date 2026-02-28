@@ -14,9 +14,9 @@ now_local = datetime.now(ZoneInfo(TZ_LOCAL))
 now_utc = datetime.now(ZoneInfo("UTC"))
 
 # 只在本地 9:00 或 10:00 执行推送
-#if now_local.hour not in [9, 10]:
-    #print(f"[SKIP] Local time is {now_local:%Y-%m-%d %H:%M:%S %Z}, not 9:00 or 10:00")
-    #sys.exit(0)
+if now_local.hour not in [9, 10]:
+    print(f"[SKIP] Local time is {now_local:%Y-%m-%d %H:%M:%S %Z}, not 9:00 or 10:00")
+    sys.exit(0)
 
 # 打印日志，方便调试
 print(f"[PASS] Local={now_local:%H:%M}, UTC={now_utc:%H:%M}")
@@ -185,4 +185,5 @@ if j.get("code") != 0:
     raise SystemExit("Push failed")
 
 print("[OK] Push sent.")
+
 
